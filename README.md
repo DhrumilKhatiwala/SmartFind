@@ -42,12 +42,14 @@ QueryForge/
 ## ⚡ Quick Start: Backend
 
 ### 1. Install Dependencies
+
 ```powershell
 cd backend
 pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment (`backend/.env`)
+
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 PINECONE_API_KEY=your_pinecone_api_key_here
@@ -55,13 +57,15 @@ PINECONE_INDEX_NAME=ecommerce-products
 ```
 
 ### 3. Run FastAPI Backend Server
+
 ```powershell
 cd backend
 python -m src.app
 ```
-* **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
-* **Search Endpoint**: `POST http://localhost:8000/search`
+
+- **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
+- **Search Endpoint**: `POST http://localhost:8000/search`
 
 ---
 
