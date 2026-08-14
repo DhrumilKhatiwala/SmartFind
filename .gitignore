@@ -1,0 +1,36 @@
+# Environment and API keys
+.env
+*.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+
+# Large Model Weights & Checkpoints
+models/
+backend/models/
+*.safetensors
+*.bin
+*.onnx
+
+# Node / React
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.npm
+.eslintcache
+
+# Logs & System
+*.log
+.DS_Store
+Thumbs.db
+
