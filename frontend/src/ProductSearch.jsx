@@ -10,6 +10,7 @@ const ProductSearch = () => {
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
+  const [expandedExplanations, setExpandedExplanations] = useState({});
 
   const sampleQueries = [
     'phones under 20000 with rating above 4',
@@ -26,6 +27,7 @@ const ProductSearch = () => {
     setError(null);
     setSearched(true);
     setImageErrors({});
+    setExpandedExplanations({});
 
     try {
       const response = await axios.post(`${API_BASE_URL}/search`, {
@@ -49,6 +51,13 @@ const ProductSearch = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     handleSearch();
+  };
+
+  const toggleExplanation = (index) => {
+    setExpandedExplanations((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
   };
 
   const formatPrice = (price) => {
@@ -207,6 +216,7 @@ const ProductSearch = () => {
                 item.metadata || {};
 
               const hasValidImage = image && !imageErrors[index];
+              const isExplanationOpen = !!expandedExplanations[index];
 
               return (
                 <div key={index} style={styles.card}>
@@ -307,6 +317,33 @@ const ProductSearch = () => {
                       <button disabled style={styles.disabledButton}>
                         Details Available in Catalog
                       </button>
+                    )}
+
+                    {/* Subtle Expandable AI Explanation */}
+                    {item.explanation && (
+                      <div style={styles.explanationContainer}>
+                        <button
+                          type="button"
+                          onClick={() => toggleExplanation(index)}
+                          style={styles.explanationToggleBtn}
+                          aria-expanded={isExplanationOpen}
+                        >
+                          <span style={styles.explanationToggleLabel}>
+                            💡 Why this matched
+                          </span>
+                          <span style={styles.explanationChevron}>
+                            {isExplanationOpen ? '▲' : '▼'}
+                          </span>
+                        </button>
+
+                        {isExplanationOpen && (
+                          <div style={styles.explanationBox}>
+                            <p style={styles.explanationText}>
+                              {item.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -705,6 +742,50 @@ const styles = {
     fontWeight: '600',
     borderRadius: '10px',
     border: 'none',
+  },
+  explanationContainer: {
+    marginTop: '12px',
+    paddingTop: '10px',
+    borderTop: '1px dashed #e2e8f0',
+  },
+  explanationToggleBtn: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    background: 'none',
+    border: 'none',
+    padding: '4px 0',
+    cursor: 'pointer',
+    color: '#4f46e5',
+    fontSize: '0.78rem',
+    fontWeight: '600',
+    fontFamily: 'inherit',
+    textAlign: 'left',
+  },
+  explanationToggleLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  explanationChevron: {
+    fontSize: '0.65rem',
+    color: '#6366f1',
+    marginLeft: '6px',
+  },
+  explanationBox: {
+    marginTop: '8px',
+    padding: '10px 12px',
+    backgroundColor: '#f8fafc',
+    borderRadius: '10px',
+    border: '1px solid #e2e8f0',
+  },
+  explanationText: {
+    fontSize: '0.76rem',
+    color: '#334155',
+    lineHeight: '1.45',
+    margin: 0,
+    fontWeight: '500',
   },
   emptyContainer: {
     textAlign: 'center',

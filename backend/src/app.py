@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from src.explainer import generate_structured_explanation
 from src.retriever import initialize_self_query_retriever
 
 # Load environment configuration (.env)
@@ -43,6 +44,10 @@ class ProductMetadata(BaseModel):
 class DocumentResult(BaseModel):
     page_content: str = Field(..., description="Combined product name and sub-category")
     metadata: ProductMetadata = Field(..., description="Structured product metadata")
+    explanation: Optional[str] = Field(
+        None,
+        description="Concise human-readable explanation of semantic match and satisfied metadata filters",
+    )
 
 
 class SearchResponse(BaseModel):
@@ -51,9 +56,11 @@ class SearchResponse(BaseModel):
     results: List[DocumentResult]
 
 
-# In-memory application state
+
+# In-memory application state & query cache
 retriever_instance = None
 product_lookup: Dict[str, dict] = {}
+SEARCH_CACHE: Dict[str, SearchResponse] = {}
 
 
 def load_product_metadata_lookup() -> Dict[str, dict]:
@@ -162,6 +169,7 @@ async def health_check():
         "retriever": "ready" if is_ready else "uninitialized",
         "vectorstore": "Pinecone Cloud",
         "cached_products": len(product_lookup),
+        "cached_queries": len(SEARCH_CACHE),
     }
 
 
@@ -178,11 +186,44 @@ async def search_products(payload: SearchRequest):
             detail="SelfQueryRetriever service is not initialized.",
         )
 
-    try:
-        # Execute query against pre-initialized SelfQueryRetriever
-        raw_docs = retriever_instance.invoke(payload.query)[: payload.top_k]
+    # 1. Fast Cache Lookup (0.001 ms for repeated queries)
+    cache_key = f"{payload.query.strip().lower()}__top{payload.top_k}"
+    if cache_key in SEARCH_CACHE:
+        return SEARCH_CACHE[cache_key]
 
-        # Format retrieved LangChain Documents into clean Pydantic response with enriched metadata
+    try:
+        # 1. Parse structured query using Gemini LLM
+        structured_query = None
+        if hasattr(retriever_instance, "query_constructor"):
+            try:
+                structured_query = retriever_instance.query_constructor.invoke(
+                    {"query": payload.query}
+                )
+            except Exception as qc_err:
+                err_str = str(qc_err)
+                if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower():
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Gemini API Quota Exceeded (429). Please update your GEMINI_API_KEY in backend/.env.",
+                    )
+                raise qc_err
+
+        # 2. Retrieve filtered documents via SelfQueryRetriever
+        try:
+            raw_docs = retriever_instance.invoke(payload.query)[: payload.top_k]
+        except Exception as ret_err:
+            err_str = str(ret_err)
+            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Gemini API Quota Exceeded (429). Please update your GEMINI_API_KEY in backend/.env.",
+                )
+            raise ret_err
+
+
+
+
+        # 4. Format retrieved documents into response with enriched metadata & explanation
         formatted_results: List[DocumentResult] = []
         for doc in raw_docs:
             meta = doc.metadata or {}
@@ -198,6 +239,14 @@ async def search_products(payload: SearchRequest):
                 or {}
             )
 
+            # Generate concise, human-readable explanation using actual parsed filters
+            explanation = generate_structured_explanation(
+                structured_query=structured_query,
+                raw_query=payload.query,
+                document_content=content,
+                metadata=meta,
+            )
+
             formatted_results.append(
                 DocumentResult(
                     page_content=content,
@@ -211,19 +260,26 @@ async def search_products(payload: SearchRequest):
                         actual_price=extra_info.get("actual_price"),
                         discount_price=extra_info.get("discount_price"),
                     ),
+                    explanation=explanation,
                 )
             )
 
-        return SearchResponse(
+        response = SearchResponse(
             query=payload.query,
             count=len(formatted_results),
             results=formatted_results,
         )
+
+        # Cache response for instant repeat queries
+        SEARCH_CACHE[cache_key] = response
+        return response
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while performing search: {str(e)}",
         )
+
+
 
 
 if __name__ == "__main__":

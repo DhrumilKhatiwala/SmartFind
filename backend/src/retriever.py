@@ -23,10 +23,12 @@ load_dotenv()
 
 
 def initialize_self_query_retriever(
-    model_name: str = "gemini-2.5-flash",
+    model_name: str = "gemini-3.5-flash",
     temperature: float = 0.0,
     search_k: int = 10,
 ) -> SelfQueryRetriever:
+
+
     """
     Initializes a LangChain SelfQueryRetriever configured with:
     - ChatGoogleGenerativeAI (Gemini 2.5 Flash) for constructing structured filters from natural language.
