@@ -77,9 +77,10 @@ def store_documents_in_pinecone(
     documents: List[Document],
     index_name: Optional[str] = None,
     embedding_model: Optional[HuggingFaceEmbeddings] = None,
+    ids: Optional[List[str]] = None,
 ) -> PineconeVectorStore:
     """
-    Upserts documents into Pinecone Cloud index.
+    Upserts documents into Pinecone Cloud index with deterministic IDs.
     """
     index_name = index_name or os.getenv("PINECONE_INDEX_NAME", "ecommerce-products")
     ensure_pinecone_index_exists(index_name=index_name, dimension=384)
@@ -91,8 +92,10 @@ def store_documents_in_pinecone(
         documents=documents,
         embedding=embedding_model,
         index_name=index_name,
+        ids=ids,
     )
     return vectorstore
+
 
 
 def load_pinecone_vector_db(

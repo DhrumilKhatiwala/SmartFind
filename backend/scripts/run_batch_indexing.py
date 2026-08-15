@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import time
@@ -21,7 +22,7 @@ load_dotenv()
 def run_batch_indexing(
     csv_file: Optional[str] = None,
     batch_size: int = 500,
-    delay_between_batches: float = 0.2,
+    delay_between_batches: float = 0.15,
     max_docs: Optional[int] = None,
     index_name: str = "ecommerce-products",
 ):
@@ -33,7 +34,7 @@ def run_batch_indexing(
             f"Preprocessed dataset '{csv_file}' not found."
         )
 
-    print(f"Loading dataset from '{csv_file}'...")
+    print(f"Loading preprocessed dataset from '{csv_file}'...")
     df = pd.read_csv(csv_file)
 
     if max_docs:
@@ -50,21 +51,39 @@ def run_batch_indexing(
     total_batches = (total_docs + batch_size - 1) // batch_size
     print(
         f"Starting fast local vectorization & upload of {total_docs:,} documents to Pinecone "
-        f"({total_batches} batches of up to {batch_size} docs each)..."
+        f"({total_batches} batches of {batch_size} docs each)..."
     )
 
     start_time = time.time()
     for batch_num, i in enumerate(range(0, total_docs, batch_size), start=1):
         batch_docs = docs[i : i + batch_size]
-        print(
-            f"--> Processing Batch {batch_num}/{total_batches} "
-            f"({len(batch_docs)} items | Progress: {i + len(batch_docs):,}/{total_docs:,})..."
-        )
 
+        # Generate deterministic MD5 IDs for idempotent upserting (zero duplicates)
+        doc_ids = [
+            hashlib.md5(
+                f"{doc.page_content}_{doc.metadata.get('category', '')}_{doc.metadata.get('price', '')}".encode(
+                    "utf-8"
+                )
+            ).hexdigest()
+            for doc in batch_docs
+        ]
+
+        batch_t0 = time.time()
         store_documents_in_pinecone(
             documents=batch_docs,
             index_name=index_name,
             embedding_model=embedding_model,
+            ids=doc_ids,
+        )
+        batch_duration = time.time() - batch_t0
+        items_done = min(i + len(batch_docs), total_docs)
+        percent = (items_done / total_docs) * 100
+        elapsed = time.time() - start_time
+        rate = items_done / elapsed if elapsed > 0 else 0
+
+        print(
+            f"--> Batch {batch_num}/{total_batches} done in {batch_duration:.2f}s "
+            f"({items_done:,}/{total_docs:,} | {percent:.1f}% | Rate: {rate:.1f} docs/s)..."
         )
 
         if i + batch_size < total_docs and delay_between_batches > 0:
@@ -78,10 +97,14 @@ def run_batch_indexing(
 
 
 if __name__ == "__main__":
-    doc_limit = 500 if len(sys.argv) <= 1 else (None if sys.argv[1].lower() == "full" else int(sys.argv[1]))
+    # If no argument or 'full', index all 258,911 products
+    if len(sys.argv) <= 1 or sys.argv[1].lower() in ["full", "all"]:
+        doc_limit = None
+    else:
+        doc_limit = int(sys.argv[1])
 
     run_batch_indexing(
         batch_size=500,
-        delay_between_batches=0.2,
+        delay_between_batches=0.15,
         max_docs=doc_limit,
     )

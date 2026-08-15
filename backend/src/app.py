@@ -23,11 +23,12 @@ class SearchRequest(BaseModel):
         examples=["headphones under 2000"],
     )
     top_k: int = Field(
-        50,
+        500,
         ge=1,
-        le=100,
-        description="Maximum number of top results to return (defaults to 50)",
+        le=1000,
+        description="Maximum number of top results to return (defaults to 500)",
     )
+
 
 
 
@@ -163,7 +164,8 @@ async def lifespan(app: FastAPI):
     global retriever_instance, product_lookup
     print("Pre-initializing SelfQueryRetriever and connecting to Pinecone Cloud...")
     try:
-        retriever_instance = initialize_self_query_retriever(search_k=50)
+        retriever_instance = initialize_self_query_retriever(search_k=500)
+
 
         print("SelfQueryRetriever pre-initialized successfully.")
     except Exception as err:

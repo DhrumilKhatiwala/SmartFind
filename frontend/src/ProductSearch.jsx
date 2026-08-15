@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import Header from './components/Header';
 import SearchBar from './components/SearchBar';
 import ResultsHeader from './components/ResultsHeader';
 import FilterChips from './components/FilterChips';
 import ProductCard from './components/ProductCard';
+import Pagination from './components/Pagination';
 import LoadingState from './components/LoadingState';
 import EmptyState from './components/EmptyState';
 import ErrorState from './components/ErrorState';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
+const ITEMS_PER_PAGE = 48;
 
 const sampleQueries = [
   'headphones under ₹1500 with rating above 4',
@@ -67,19 +69,20 @@ const extractActiveConstraints = (queryStr, results) => {
     }
   }
 
-
   return chips;
 };
-
 
 const ProductSearch = () => {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
   const [expandedExplanations, setExpandedExplanations] = useState({});
+
+  const resultsRef = useRef(null);
 
   const handleSearch = async (overrideQuery) => {
     const activeQuery = overrideQuery !== undefined ? overrideQuery : query;
@@ -89,12 +92,13 @@ const ProductSearch = () => {
     setError(null);
     setSearched(true);
     setSubmittedQuery(activeQuery.trim());
+    setCurrentPage(1);
     setExpandedExplanations({});
 
     try {
       const response = await axios.post(`${API_BASE_URL}/search`, {
         query: activeQuery.trim(),
-        top_k: 50,
+        top_k: 500,
       });
 
       setResults(response.data.results || []);
@@ -114,10 +118,24 @@ const ProductSearch = () => {
     setQuery('');
     setSubmittedQuery('');
     setResults([]);
+    setCurrentPage(1);
     setSearched(false);
     setError(null);
     setExpandedExplanations({});
   };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    setTimeout(() => {
+      if (resultsRef.current) {
+        const topPos = resultsRef.current.getBoundingClientRect().top + window.scrollY - 20;
+        window.scrollTo({ top: Math.max(0, topPos), behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 50);
+  };
+
 
   const toggleExplanation = (index) => {
     setExpandedExplanations((prev) => ({
@@ -127,6 +145,11 @@ const ProductSearch = () => {
   };
 
   const activeConstraints = extractActiveConstraints(submittedQuery, results);
+
+  // Pagination calculation: 48 items per page
+  const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedResults = results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <main style={styles.container}>
@@ -154,25 +177,41 @@ const ProductSearch = () => {
 
       {/* Search Results */}
       {!loading && searched && results.length > 0 && (
-        <section style={styles.resultsSection} aria-label="Search Results">
+        <section
+          ref={resultsRef}
+          style={styles.resultsSection}
+          aria-label="Search Results"
+        >
           {/* Active Filter / Constraint Chips */}
           <FilterChips constraints={activeConstraints} />
 
           {/* Results Summary Header */}
           <ResultsHeader count={results.length} query={submittedQuery} />
 
-          {/* Responsive Product Cards Grid */}
-          <div style={styles.grid}>
-            {results.map((product, index) => (
-              <ProductCard
-                key={index}
-                product={product}
-                index={index}
-                isExplanationOpen={!!expandedExplanations[index]}
-                onToggleExplanation={() => toggleExplanation(index)}
-              />
-            ))}
+          {/* Responsive 4-Column Product Cards Grid (4 in a row on desktop) */}
+          <div className="product-grid">
+            {paginatedResults.map((product, index) => {
+              const globalIndex = startIndex + index;
+              return (
+                <ProductCard
+                  key={globalIndex}
+                  product={product}
+                  index={globalIndex}
+                  isExplanationOpen={!!expandedExplanations[globalIndex]}
+                  onToggleExplanation={() => toggleExplanation(globalIndex)}
+                />
+              );
+            })}
           </div>
+
+          {/* Pagination Controls (48 items per page) */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={results.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={handlePageChange}
+          />
         </section>
       )}
 
@@ -192,7 +231,7 @@ const ProductSearch = () => {
 
 const styles = {
   container: {
-    maxWidth: '1280px',
+    maxWidth: '1440px',
     margin: '0 auto',
     padding: '40px 24px 80px 24px',
     color: '#0f172a',
@@ -200,13 +239,9 @@ const styles = {
   },
   resultsSection: {
     marginTop: '16px',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '24px',
-    alignItems: 'start',
+    scrollMarginTop: '20px',
   },
 };
 
 export default ProductSearch;
+

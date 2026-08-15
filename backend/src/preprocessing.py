@@ -11,16 +11,25 @@ def clean_currency_to_float(series: pd.Series) -> pd.Series:
     return pd.to_numeric(cleaned, errors="coerce")
 
 
-def preprocess_ecommerce_data(
-    file_path: str, output_path: str = None
+def preprocess_and_update_amazon_data(
+    input_file: str,
+    output_preprocessed_csv: str,
+    output_amazon_csv: str,
+    deduplicate_by_name: bool = True,
 ) -> pd.DataFrame:
     """
-    Preprocesses e-commerce CSV data by cleaning prices, ratings,
-    handling missing values, combining text features, and selecting final columns.
+    Preprocesses the complete Amazon dataset:
+    1. Cleans prices (discount_price with actual_price fallback)
+    2. Cleans ratings (0.0 to 5.0)
+    3. Formats combined search text (name - sub_category)
+    4. Deduplicates on unique product name (Option A)
+    5. Directly updates amazon.csv and amazon_preprocessed.csv
     """
-    df = pd.read_csv(file_path, low_memory=False)
+    print(f"Loading raw Amazon dataset from: {input_file}...")
+    df = pd.read_csv(input_file, low_memory=False)
+    print(f"Loaded {len(df):,} raw records.")
 
-    # Clean price fields
+    # 1. Clean prices
     if "discount_price" in df.columns:
         df["price"] = clean_currency_to_float(df["discount_price"])
         if "actual_price" in df.columns:
@@ -30,18 +39,17 @@ def preprocess_ecommerce_data(
     else:
         df["price"] = pd.NA
 
-    # Convert rating column to numeric safely
+    # 2. Clean ratings
     rating_col = "ratings" if "ratings" in df.columns else "rating"
     df["rating"] = pd.to_numeric(df[rating_col], errors="coerce")
 
-    # Handle missing string features
+    # 3. Clean string features
     name_col = df["name"].fillna("").astype(str).str.strip() if "name" in df.columns else pd.Series("", index=df.index)
     sub_cat_col = df["sub_category"].fillna("").astype(str).str.strip() if "sub_category" in df.columns else pd.Series("", index=df.index)
-
-    # Create combined text column
+    df["name_clean"] = name_col
     df["text"] = (name_col + " - " + sub_cat_col).str.strip(" -")
 
-    # Map main category column
+    # 4. Clean category
     if "main_category" in df.columns:
         df["category"] = df["main_category"].fillna("Unknown").astype(str).str.strip()
     elif "category" in df.columns:
@@ -49,27 +57,47 @@ def preprocess_ecommerce_data(
     else:
         df["category"] = "Unknown"
 
-    # Drop missing numerical metrics
-    df = df.dropna(subset=["price", "rating"])
-    df = df[df["text"].str.len() > 0]
+    # Filter rows where price, rating, and name are present
+    valid_mask = df["price"].notna() & df["rating"].notna() & (df["name_clean"].str.len() > 0)
+    df_valid = df[valid_mask].copy()
+    print(f"Valid records with numerical price & rating: {len(df_valid):,}")
 
-    # Target output columns
+    # 5. Deduplicate by unique product title (Option A)
+    if deduplicate_by_name:
+        df_valid = df_valid.drop_duplicates(subset=["name_clean"], keep="first")
+        print(f"Unique distinct products after title deduplication: {len(df_valid):,}")
+
+    df_valid = df_valid.reset_index(drop=True)
+
+    # 6. Update amazon_preprocessed.csv
     target_columns = ["text", "price", "rating", "category"]
-    df = df[target_columns].reset_index(drop=True)
+    preprocessed_df = df_valid[target_columns].copy()
+    os.makedirs(os.path.dirname(output_preprocessed_csv), exist_ok=True)
+    preprocessed_df.to_csv(output_preprocessed_csv, index=False)
+    print(f"--> Successfully updated '{output_preprocessed_csv}' ({len(preprocessed_df):,} rows).")
 
-    if output_path:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        df.to_csv(output_path, index=False)
+    # 7. Update amazon.csv (rich metadata for images, rating counts, actual prices)
+    metadata_cols = [
+        c for c in ["name", "main_category", "sub_category", "image", "link", "ratings", "no_of_ratings", "discount_price", "actual_price"]
+        if c in df_valid.columns
+    ]
+    df_valid[metadata_cols].to_csv(output_amazon_csv, index=False)
+    print(f"--> Successfully updated '{output_amazon_csv}' ({len(df_valid):,} rows).")
 
-    return df
+    return preprocessed_df
 
 
 if __name__ == "__main__":
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    input_csv = os.path.join(workspace_dir, "data", "amazon.csv")
-    output_csv = os.path.join(workspace_dir, "data", "amazon_preprocessed.csv")
+    project_root = os.path.dirname(workspace_dir)
 
-    if os.path.exists(input_csv):
-        cleaned_df = preprocess_ecommerce_data(input_csv, output_csv)
-        print(f"Successfully processed {len(cleaned_df):,} rows.")
-        print(cleaned_df.head(10))
+    input_csv = os.path.join(project_root, "archive", "Amazon-Products.csv")
+    output_prep_csv = os.path.join(workspace_dir, "data", "amazon_preprocessed.csv")
+    output_amazon_csv = os.path.join(workspace_dir, "data", "amazon.csv")
+
+    preprocess_and_update_amazon_data(
+        input_file=input_csv,
+        output_preprocessed_csv=output_prep_csv,
+        output_amazon_csv=output_amazon_csv,
+        deduplicate_by_name=True,
+    )
