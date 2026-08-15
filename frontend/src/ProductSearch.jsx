@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const ProductSearch = () => {
   const [query, setQuery] = useState('');
@@ -291,34 +291,6 @@ const ProductSearch = () => {
                       </div>
                     </div>
 
-                    {/* Action Button: View on Amazon */}
-                    {link ? (
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={styles.amazonButton}
-                      >
-                        <span>View on Amazon</span>
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                        >
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                          <polyline points="15 3 21 3 21 9" />
-                          <line x1="10" y1="14" x2="21" y2="3" />
-                        </svg>
-                      </a>
-                    ) : (
-                      <button disabled style={styles.disabledButton}>
-                        Details Available in Catalog
-                      </button>
-                    )}
-
                     {/* Subtle Expandable AI Explanation */}
                     {item.explanation && (
                       <div style={styles.explanationContainer}>
@@ -580,6 +552,7 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
     gap: '24px',
+    alignItems: 'start',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -590,6 +563,7 @@ const styles = {
     flexDirection: 'column',
     boxShadow: '0 3px 12px rgba(0, 0, 0, 0.05)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    height: 'fit-content',
   },
   imageContainer: {
     position: 'relative',
@@ -640,8 +614,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     flex: '1',
-    justifyContent: 'space-between',
   },
+
   subCategoryBadge: {
     display: 'inline-block',
     backgroundColor: '#f1f5f9',
@@ -716,32 +690,6 @@ const styles = {
     color: '#94a3b8',
     textDecoration: 'line-through',
     fontWeight: '500',
-  },
-  amazonButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
-    width: '100%',
-    padding: '10px 14px',
-    backgroundColor: '#ff9900',
-    color: '#111827',
-    fontSize: '0.88rem',
-    fontWeight: '700',
-    borderRadius: '10px',
-    textDecoration: 'none',
-    boxShadow: '0 2px 8px rgba(255, 153, 0, 0.25)',
-    transition: 'background-color 0.15s ease',
-  },
-  disabledButton: {
-    width: '100%',
-    padding: '10px 14px',
-    backgroundColor: '#f1f5f9',
-    color: '#94a3b8',
-    fontSize: '0.82rem',
-    fontWeight: '600',
-    borderRadius: '10px',
-    border: 'none',
   },
   explanationContainer: {
     marginTop: '12px',

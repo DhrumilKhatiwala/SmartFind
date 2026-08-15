@@ -35,10 +35,10 @@ class ProductMetadata(BaseModel):
     rating: Optional[float] = Field(None, description="Customer review rating (0.0 to 5.0)")
     category: Optional[str] = Field(None, description="Product category/department")
     image: Optional[str] = Field(None, description="Product image URL")
-    link: Optional[str] = Field(None, description="Amazon product URL")
     no_of_ratings: Optional[str] = Field(None, description="Number of customer reviews/ratings")
     actual_price: Optional[str] = Field(None, description="Original/MRP price in INR")
     discount_price: Optional[str] = Field(None, description="Discounted price string")
+
 
 
 class DocumentResult(BaseModel):
@@ -192,12 +192,14 @@ async def search_products(payload: SearchRequest):
         return SEARCH_CACHE[cache_key]
 
     try:
-        # 1. Parse structured query using Gemini LLM
+        from starlette.concurrency import run_in_threadpool
+
+        # 1. Non-blocking Single-Pass LLM Execution
         structured_query = None
         if hasattr(retriever_instance, "query_constructor"):
             try:
-                structured_query = retriever_instance.query_constructor.invoke(
-                    {"query": payload.query}
+                structured_query = await run_in_threadpool(
+                    retriever_instance.query_constructor.invoke, {"query": payload.query}
                 )
             except Exception as qc_err:
                 err_str = str(qc_err)
@@ -208,17 +210,33 @@ async def search_products(payload: SearchRequest):
                     )
                 raise qc_err
 
-        # 2. Retrieve filtered documents via SelfQueryRetriever
-        try:
-            raw_docs = retriever_instance.invoke(payload.query)[: payload.top_k]
-        except Exception as ret_err:
-            err_str = str(ret_err)
-            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower():
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Gemini API Quota Exceeded (429). Please update your GEMINI_API_KEY in backend/.env.",
+        # 2. Fast AST Translation to Pinecone Filter (0ms, eliminates duplicate LLM invocation)
+        semantic_query = payload.query
+        pinecone_filter = None
+        if structured_query:
+            semantic_query, search_kwargs = (
+                retriever_instance.structured_query_translator.visit_structured_query(
+                    structured_query
                 )
-            raise ret_err
+            )
+            pinecone_filter = search_kwargs.get("filter") if search_kwargs else None
+
+        # 3. Non-blocking Direct Pinecone Vector Search with Filter
+        if pinecone_filter:
+            raw_docs = await run_in_threadpool(
+                retriever_instance.vectorstore.similarity_search,
+                semantic_query or payload.query,
+                k=payload.top_k,
+                filter=pinecone_filter,
+            )
+        else:
+            raw_docs = await run_in_threadpool(
+                retriever_instance.vectorstore.similarity_search,
+                semantic_query or payload.query,
+                k=payload.top_k,
+            )
+
+
 
 
 
@@ -255,7 +273,6 @@ async def search_products(payload: SearchRequest):
                         rating=meta.get("rating"),
                         category=meta.get("category"),
                         image=extra_info.get("image"),
-                        link=extra_info.get("link"),
                         no_of_ratings=extra_info.get("no_of_ratings"),
                         actual_price=extra_info.get("actual_price"),
                         discount_price=extra_info.get("discount_price"),
@@ -263,6 +280,7 @@ async def search_products(payload: SearchRequest):
                     explanation=explanation,
                 )
             )
+
 
         response = SearchResponse(
             query=payload.query,
