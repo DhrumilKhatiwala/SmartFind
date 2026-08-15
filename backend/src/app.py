@@ -23,11 +23,12 @@ class SearchRequest(BaseModel):
         examples=["headphones under 2000"],
     )
     top_k: int = Field(
-        10,
+        50,
         ge=1,
-        le=50,
-        description="Maximum number of top results to return (defaults to 10)",
+        le=100,
+        description="Maximum number of top results to return (defaults to 50)",
     )
+
 
 
 class ProductMetadata(BaseModel):
@@ -121,12 +122,49 @@ def load_product_metadata_lookup() -> Dict[str, dict]:
         return {}
 
 
+def sanitize_pinecone_filter(filter_obj):
+    """
+    Recursively sanitizes Pinecone metadata filter dictionaries to ensure:
+    - Numeric fields ('price', 'rating') are strictly converted to float/int, not strings.
+    - Resolves Pinecone 400 error: 'the $gt operator must be followed by a number, got string instead'.
+    """
+    if not isinstance(filter_obj, dict):
+        return filter_obj
+
+    sanitized = {}
+    for key, value in filter_obj.items():
+        if key in ("price", "rating"):
+            if isinstance(value, dict):
+                inner = {}
+                for op, op_val in value.items():
+                    try:
+                        clean_str = str(op_val).replace(",", "").strip()
+                        inner[op] = float(clean_str)
+                    except (ValueError, TypeError):
+                        inner[op] = op_val
+                sanitized[key] = inner
+            else:
+                try:
+                    sanitized[key] = float(str(value).replace(",", "").strip())
+                except (ValueError, TypeError):
+                    sanitized[key] = value
+        elif key in ("$and", "$or") and isinstance(value, list):
+            sanitized[key] = [sanitize_pinecone_filter(item) for item in value if item]
+        else:
+            sanitized[key] = (
+                sanitize_pinecone_filter(value) if isinstance(value, dict) else value
+            )
+    return sanitized
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
     global retriever_instance, product_lookup
     print("Pre-initializing SelfQueryRetriever and connecting to Pinecone Cloud...")
     try:
-        retriever_instance = initialize_self_query_retriever(search_k=10)
+        retriever_instance = initialize_self_query_retriever(search_k=50)
+
         print("SelfQueryRetriever pre-initialized successfully.")
     except Exception as err:
         print(f"Error during retriever initialization: {err}")
@@ -219,22 +257,32 @@ async def search_products(payload: SearchRequest):
                     structured_query
                 )
             )
-            pinecone_filter = search_kwargs.get("filter") if search_kwargs else None
+            raw_filter = search_kwargs.get("filter") if search_kwargs else None
+            pinecone_filter = sanitize_pinecone_filter(raw_filter) if raw_filter else None
 
-        # 3. Non-blocking Direct Pinecone Vector Search with Filter
+        # 3. Non-blocking Direct Pinecone Vector Search with Sanitized Filter
         if pinecone_filter:
-            raw_docs = await run_in_threadpool(
-                retriever_instance.vectorstore.similarity_search,
-                semantic_query or payload.query,
-                k=payload.top_k,
-                filter=pinecone_filter,
-            )
+            try:
+                raw_docs = await run_in_threadpool(
+                    retriever_instance.vectorstore.similarity_search,
+                    semantic_query or payload.query,
+                    k=payload.top_k,
+                    filter=pinecone_filter,
+                )
+            except Exception as pinecone_err:
+                print(f"Pinecone filter fallback ({pinecone_err}). Running similarity search without filter...")
+                raw_docs = await run_in_threadpool(
+                    retriever_instance.vectorstore.similarity_search,
+                    semantic_query or payload.query,
+                    k=payload.top_k,
+                )
         else:
             raw_docs = await run_in_threadpool(
                 retriever_instance.vectorstore.similarity_search,
                 semantic_query or payload.query,
                 k=payload.top_k,
             )
+
 
 
 

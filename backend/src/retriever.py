@@ -25,8 +25,9 @@ load_dotenv()
 def initialize_self_query_retriever(
     model_name: str = "gemini-3.5-flash-lite",
     temperature: float = 0.0,
-    search_k: int = 10,
+    search_k: int = 50,
 ) -> SelfQueryRetriever:
+
 
 
 

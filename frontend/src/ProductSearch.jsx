@@ -32,8 +32,9 @@ const ProductSearch = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/search`, {
         query: activeQuery.trim(),
-        top_k: 12,
+        top_k: 50,
       });
+
 
       setResults(response.data.results || []);
     } catch (err) {
