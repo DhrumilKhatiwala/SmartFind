@@ -1,4 +1,4 @@
-﻿# Environment and API keys
+# Environment and API keys
 .env
 *.env
 backend/.env
@@ -30,7 +30,9 @@ frontend/build/
 # IDE & AI Agents
 .agents/
 
-# Heavy Raw CSV Data (Excluded from Git)
+# Heavy Raw Data and Generated SQLite Databases (Excluded from Git)
 archive/
 *.csv
 backend/data/*.csv
+*.db
+backend/data/*.db

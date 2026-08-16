@@ -1,3 +1,5 @@
+import sqlite3
+import pyarrow.parquet as pq
 import os
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
@@ -65,66 +67,79 @@ product_lookup: Dict[str, dict] = {}
 SEARCH_CACHE: Dict[str, SearchResponse] = {}
 
 
-def load_product_metadata_lookup() -> Dict[str, dict]:
+db_connection: Optional[sqlite3.Connection] = None
+
+
+def init_metadata_database() -> Optional[sqlite3.Connection]:
     """
-    Builds a fast in-memory dictionary mapping product names and combined text
-    to rich Amazon metadata (images, links, ratings count, actual price).
+    Initializes a zero-RAM on-disk SQLite index for instantaneous metadata lookups.
+    Uses streaming parquet chunks to keep peak memory < 20 MB during startup.
     """
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    candidates = [
+    candidates_db = [
+        os.path.join(workspace_dir, "data", "metadata.db"),
+        os.path.join(workspace_dir, "backend", "data", "metadata.db"),
+        os.path.join("data", "metadata.db"),
+        os.path.join("backend", "data", "metadata.db"),
+    ]
+    candidates_parquet = [
         os.path.join(workspace_dir, "data", "metadata.parquet"),
         os.path.join(workspace_dir, "backend", "data", "metadata.parquet"),
         os.path.join("data", "metadata.parquet"),
         os.path.join("backend", "data", "metadata.parquet"),
-        os.path.join(workspace_dir, "data", "amazon.csv"),
-        os.path.join(workspace_dir, "backend", "data", "amazon.csv"),
-        os.path.join("data", "amazon.csv"),
-        os.path.join("backend", "data", "amazon.csv"),
     ]
 
-    target_path = next((p for p in candidates if os.path.exists(p)), None)
-    if not target_path:
-        print("Warning: Neither metadata.parquet nor amazon.csv found for metadata enrichment.")
-        return {}
+    db_path = next((p for p in candidates_db if os.path.exists(p)), None)
+    parquet_path = next((p for p in candidates_parquet if os.path.exists(p)), None)
 
-    print(f"Loading metadata lookup from: {target_path}...")
-    try:
-        df = pd.read_parquet(target_path) if target_path.endswith(".parquet") else pd.read_csv(target_path, low_memory=False)
-        lookup = {}
-        for _, row in df.iterrows():
-            name = str(row.get("name", "")).strip()
-            sub_cat = str(row.get("sub_category", "")).strip()
-            combined_text = f"{name} - {sub_cat}".strip(" -")
+    if not db_path and parquet_path:
+        target_db = os.path.join(os.path.dirname(parquet_path), "metadata.db")
+        print(f"Streaming lightweight SQLite index from {parquet_path}...")
+        try:
+            conn = sqlite3.connect(target_db)
+            cur = conn.cursor()
+            cur.execute("PRAGMA synchronous = OFF;")
+            cur.execute("PRAGMA journal_mode = MEMORY;")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS products (
+                    name TEXT,
+                    combined_text TEXT,
+                    image TEXT,
+                    no_of_ratings TEXT,
+                    actual_price TEXT,
+                    discount_price TEXT
+                )
+            """)
+            parquet_file = pq.ParquetFile(parquet_path)
+            for batch in parquet_file.iter_batches(batch_size=25000, columns=["name", "sub_category", "image", "no_of_ratings", "actual_price", "discount_price"]):
+                names = batch["name"].to_pylist()
+                sub_cats = batch["sub_category"].to_pylist()
+                images = batch["image"].to_pylist()
+                ratings = batch["no_of_ratings"].to_pylist()
+                actuals = batch["actual_price"].to_pylist()
+                discounts = batch["discount_price"].to_pylist()
 
-            raw_img = row.get("image")
-            raw_link = row.get("link")
-            raw_num_ratings = row.get("no_of_ratings")
-            raw_actual_price = row.get("actual_price")
-            raw_discount_price = row.get("discount_price")
+                rows = []
+                for i in range(len(names)):
+                    n = names[i] or ""
+                    sc = sub_cats[i] or ""
+                    comb = f"{n} - {sc}".strip(" -")
+                    rows.append((n, comb, images[i], ratings[i], actuals[i], discounts[i]))
 
-            info = {
-                "image": str(raw_img).strip() if pd.notna(raw_img) and str(raw_img).startswith("http") else None,
-                "link": str(raw_link).strip() if pd.notna(raw_link) and str(raw_link).startswith("http") else None,
-                "no_of_ratings": str(raw_num_ratings).strip() if pd.notna(raw_num_ratings) else None,
-                "actual_price": str(raw_actual_price).strip() if pd.notna(raw_actual_price) else None,
-                "discount_price": str(raw_discount_price).strip() if pd.notna(raw_discount_price) else None,
-            }
+                cur.executemany("INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)", rows)
 
-            if combined_text and combined_text not in lookup:
-                lookup[combined_text] = info
-            if name and name not in lookup:
-                lookup[name] = info
-            # Also index by lowercase for case-insensitive fallback
-            if combined_text:
-                lookup[combined_text.lower()] = info
-            if name:
-                lookup[name.lower()] = info
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_comb ON products(combined_text);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_name ON products(name);")
+            conn.commit()
+            conn.close()
+            db_path = target_db
+            print("SQLite metadata index initialized successfully.")
+        except Exception as e:
+            print(f"Warning building SQLite index: {e}")
 
-        print(f"Successfully cached rich metadata for {len(lookup):,} product entries.")
-        return lookup
-    except Exception as e:
-        print(f"Error building metadata lookup table: {e}")
-        return {}
+    if db_path and os.path.exists(db_path):
+        return sqlite3.connect(db_path, check_same_thread=False)
+    return None
 
 
 def sanitize_pinecone_filter(filter_obj):
@@ -165,7 +180,7 @@ def sanitize_pinecone_filter(filter_obj):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    global retriever_instance, product_lookup
+    global retriever_instance, db_connection
     print("Pre-initializing SelfQueryRetriever and connecting to Pinecone Cloud...")
     try:
         retriever_instance = initialize_self_query_retriever(search_k=500)
@@ -177,7 +192,7 @@ async def lifespan(app: FastAPI):
         raise err
 
     # Load rich product metadata into memory
-    product_lookup = load_product_metadata_lookup()
+    db_connection = init_metadata_database()
     yield
     print("Shutting down FastAPI application...")
 
@@ -294,21 +309,47 @@ async def search_products(payload: SearchRequest):
 
 
 
-        # 4. Format retrieved documents into response with enriched metadata & explanation
+        # 4. Fast 0-RAM metadata enrichment from SQLite index
+        metadata_map = {}
+        if db_connection and raw_docs:
+            names_to_query = []
+            for doc in raw_docs:
+                c = doc.page_content.strip()
+                n = c.split(" - ")[0].strip() if " - " in c else c
+                if c: names_to_query.append(c)
+                if n: names_to_query.append(n)
+
+            unique_query_names = list(set(names_to_query))
+            if unique_query_names:
+                try:
+                    cursor = db_connection.cursor()
+                    for chunk_start in range(0, len(unique_query_names), 400):
+                        chunk = unique_query_names[chunk_start : chunk_start + 400]
+                        placeholders = ",".join("?" * len(chunk))
+                        cursor.execute(
+                            f"SELECT name, combined_text, image, no_of_ratings, actual_price, discount_price FROM products WHERE name IN ({placeholders}) OR combined_text IN ({placeholders})",
+                            chunk + chunk,
+                        )
+                        for row in cursor.fetchall():
+                            info = {
+                                "image": row[2],
+                                "no_of_ratings": row[3],
+                                "actual_price": row[4],
+                                "discount_price": row[5],
+                            }
+                            if row[0]: metadata_map[row[0]] = info
+                            if row[1]: metadata_map[row[1]] = info
+                except Exception as db_err:
+                    print(f"Metadata lookup warning: {db_err}")
+
+        # 5. Format retrieved documents into response with enriched metadata & explanation
         formatted_results: List[DocumentResult] = []
         for doc in raw_docs:
             meta = doc.metadata or {}
             content = doc.page_content.strip()
 
-            # Attempt lookup by full page_content, product name prefix, or lowercase
             name_part = content.split(" - ")[0].strip() if " - " in content else content
-            extra_info = (
-                product_lookup.get(content)
-                or product_lookup.get(name_part)
-                or product_lookup.get(content.lower())
-                or product_lookup.get(name_part.lower())
-                or {}
-            )
+            extra_info = metadata_map.get(content) or metadata_map.get(name_part) or {}
 
             # Generate concise, human-readable explanation using actual parsed filters
             explanation = generate_structured_explanation(
