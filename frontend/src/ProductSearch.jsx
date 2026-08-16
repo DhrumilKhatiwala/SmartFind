@@ -153,7 +153,7 @@ const ProductSearch = () => {
   const paginatedResults = results.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
-    <main style={styles.container}>
+    <main className="app-container" style={styles.container}>
       {/* Header */}
       <Header />
 

@@ -1,8 +1,5 @@
 import React from 'react';
 
-/**
- * SearchBar component provides natural-language search input, clear button, and suggestions.
- */
 const SearchBar = ({
   query,
   setQuery,
@@ -20,7 +17,7 @@ const SearchBar = ({
 
   return (
     <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form onSubmit={handleSubmit} className="search-form" style={styles.form}>
         <div style={styles.inputWrapper}>
           <svg
             style={styles.searchIcon}
@@ -63,6 +60,7 @@ const SearchBar = ({
 
         <button
           type="submit"
+          className="search-submit-btn"
           disabled={loading || !query.trim()}
           style={{
             ...styles.submitBtn,
@@ -125,6 +123,7 @@ const styles = {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
+    width: '100%',
   },
   searchIcon: {
     position: 'absolute',

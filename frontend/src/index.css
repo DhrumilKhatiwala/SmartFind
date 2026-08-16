@@ -26,6 +26,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -49,36 +55,23 @@ input:focus, button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Animations */
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive 4-Column Product Grid */
+/* Responsive Product Grid */
 .product-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -89,25 +82,57 @@ input:focus, button:focus-visible {
 @media (max-width: 1200px) {
   .product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
   }
 }
 
 @media (max-width: 860px) {
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 }
 
-@media (max-width: 580px) {
+@media (max-width: 540px) {
   .product-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Responsive Mobile Layout Adjustments */
+@media (max-width: 640px) {
+  .app-container {
+    padding: 20px 14px 48px 14px !important;
+  }
+  .header-title {
+    font-size: 1.85rem !important;
+  }
+  .header-subtitle {
+    font-size: 0.88rem !important;
+  }
+  .search-form {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .search-submit-btn {
+    width: 100% !important;
+    padding: 13px 20px !important;
+  }
+  .pagination-controls {
+    gap: 4px !important;
+  }
+  .page-btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 0.8rem !important;
   }
 }
 
 /* Custom subtle scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -122,4 +147,3 @@ input:focus, button:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
-

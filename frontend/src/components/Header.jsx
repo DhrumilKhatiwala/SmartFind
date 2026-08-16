@@ -1,8 +1,5 @@
 import React from 'react';
 
-/**
- * Header component displays the SmartFind brand, badge, and descriptive subtitle.
- */
 const Header = () => {
   return (
     <header style={styles.header}>
@@ -10,9 +7,8 @@ const Header = () => {
         <span style={styles.badgePulse}></span>
         Constraint-Aware Hybrid Search
       </div>
-      <h1 style={styles.title}>SmartFind</h1>
-      <p style={styles.subtitle}>
-
+      <h1 className="header-title" style={styles.title}>SmartFind</h1>
+      <p className="header-subtitle" style={styles.subtitle}>
         Natural-language product search with automatic semantic matching and structured metadata constraints.
       </p>
     </header>
