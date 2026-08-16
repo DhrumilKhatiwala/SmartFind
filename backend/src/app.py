@@ -71,21 +71,25 @@ def load_product_metadata_lookup() -> Dict[str, dict]:
     to rich Amazon metadata (images, links, ratings count, actual price).
     """
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    csv_candidates = [
+    candidates = [
+        os.path.join(workspace_dir, "data", "metadata.parquet"),
+        os.path.join(workspace_dir, "backend", "data", "metadata.parquet"),
+        os.path.join("data", "metadata.parquet"),
+        os.path.join("backend", "data", "metadata.parquet"),
         os.path.join(workspace_dir, "data", "amazon.csv"),
         os.path.join(workspace_dir, "backend", "data", "amazon.csv"),
         os.path.join("data", "amazon.csv"),
         os.path.join("backend", "data", "amazon.csv"),
     ]
 
-    csv_path = next((p for p in csv_candidates if os.path.exists(p)), None)
-    if not csv_path:
-        print("Warning: amazon.csv not found for metadata enrichment.")
+    target_path = next((p for p in candidates if os.path.exists(p)), None)
+    if not target_path:
+        print("Warning: Neither metadata.parquet nor amazon.csv found for metadata enrichment.")
         return {}
 
-    print(f"Loading metadata lookup from: {csv_path}...")
+    print(f"Loading metadata lookup from: {target_path}...")
     try:
-        df = pd.read_csv(csv_path, low_memory=False)
+        df = pd.read_parquet(target_path) if target_path.endswith(".parquet") else pd.read_csv(target_path, low_memory=False)
         lookup = {}
         for _, row in df.iterrows():
             name = str(row.get("name", "")).strip()
