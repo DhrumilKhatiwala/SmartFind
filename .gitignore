@@ -26,8 +26,12 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/build/
-# Data & Raw Archives
+
+# IDE & AI Agents
+.agents/
+
+# Data, Archives & Large CSV Files
+data/
+backend/data/
 archive/
-
-
-
+*.csv

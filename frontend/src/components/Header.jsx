@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Header component displays the QueryForge brand, badge, and descriptive subtitle.
+ * Header component displays the SmartFind brand, badge, and descriptive subtitle.
  */
 const Header = () => {
   return (
@@ -10,8 +10,9 @@ const Header = () => {
         <span style={styles.badgePulse}></span>
         Constraint-Aware Hybrid Search
       </div>
-      <h1 style={styles.title}>QueryForge</h1>
+      <h1 style={styles.title}>SmartFind</h1>
       <p style={styles.subtitle}>
+
         Natural-language product search with automatic semantic matching and structured metadata constraints.
       </p>
     </header>

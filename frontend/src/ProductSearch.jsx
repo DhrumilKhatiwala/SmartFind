@@ -10,8 +10,9 @@ import LoadingState from './components/LoadingState';
 import EmptyState from './components/EmptyState';
 import ErrorState from './components/ErrorState';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 const ITEMS_PER_PAGE = 48;
+
 
 const sampleQueries = [
   'headphones under ₹1500 with rating above 4',

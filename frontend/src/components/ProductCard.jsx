@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Explanation from './Explanation';
 
 /**
@@ -7,13 +7,13 @@ import Explanation from './Explanation';
 const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation }) => {
   const [imageError, setImageError] = useState(false);
 
-  const formatPrice = (price) => {
-    if (price === null || price === undefined) return 'N/A';
+  const formatPrice = (priceVal) => {
+    if (priceVal === null || priceVal === undefined) return 'N/A';
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
-    }).format(price);
+    }).format(priceVal);
   };
 
   const parseProductContent = (pageContent) => {
@@ -28,11 +28,19 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
     return { title: pageContent.trim(), subCategory: '' };
   };
 
-  const { title, subCategory } = parseProductContent(product.page_content);
+  const { title, subCategory } = parseProductContent(product?.page_content);
   const { price, rating, category, image, no_of_ratings, actual_price } =
-    product.metadata || {};
+    product?.metadata || {};
 
-  const hasValidImage = image && !imageError;
+
+  // Reset image error state whenever the product or image changes
+  useEffect(() => {
+    setImageError(false);
+  }, [image, product?.page_content]);
+
+  // Upgrade image URLs to https to prevent mixed-content blocking
+  const secureImageUrl = image ? String(image).replace(/^http:\/\//i, 'https://') : null;
+  const hasValidImage = secureImageUrl && !imageError;
 
   return (
     <article style={styles.card} aria-label={title}>
@@ -40,13 +48,15 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
       <div style={styles.imageContainer}>
         {hasValidImage ? (
           <img
-            src={image}
+            src={secureImageUrl}
             alt={title}
+            referrerPolicy="no-referrer"
             onError={() => setImageError(true)}
             style={styles.productImage}
             loading="lazy"
           />
         ) : (
+
           <div style={styles.imagePlaceholder}>
             <svg
               width="36"

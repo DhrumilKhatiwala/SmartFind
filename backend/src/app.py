@@ -178,34 +178,33 @@ async def lifespan(app: FastAPI):
     print("Shutting down FastAPI application...")
 
 
-# FastAPI Application Setup
+# Initialize FastAPI application
 app = FastAPI(
-    title="QueryForge Vector Search API",
-    description="Production-ready FastAPI endpoint serving LangChain SelfQueryRetriever over Pinecone Cloud Vector Store.",
+    title="SmartFind Vector Search API",
+    description="Natural-language product search with dynamic metadata filtering using Gemini 2.5 Flash and Pinecone Cloud Vector Store.",
     version="1.0.0",
     lifespan=lifespan,
 )
 
-# Enable CORS Middleware for React Frontend
+# Configure Cross-Origin Resource Sharing (CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configurable for production React frontend origin
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.get(
-    "/health",
-    status_code=status.HTTP_200_OK,
-    summary="Check Application and Vector Retriever Health Status",
-)
+@app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
 async def health_check():
+    """
+    Health check endpoint to verify backend operational readiness.
+    """
     is_ready = retriever_instance is not None
     return {
         "status": "healthy" if is_ready else "degraded",
-        "service": "QueryForge Vector Search API",
+        "service": "SmartFind Vector Search API",
         "retriever": "ready" if is_ready else "uninitialized",
         "vectorstore": "Pinecone Cloud",
         "cached_products": len(product_lookup),
