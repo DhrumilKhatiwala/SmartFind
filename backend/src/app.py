@@ -1,4 +1,4 @@
-import sqlite3
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import os
 from contextlib import asynccontextmanager
@@ -67,78 +67,26 @@ product_lookup: Dict[str, dict] = {}
 SEARCH_CACHE: Dict[str, SearchResponse] = {}
 
 
-db_connection: Optional[sqlite3.Connection] = None
+metadata_dataset: Optional[ds.Dataset] = None
 
 
-def init_metadata_database() -> Optional[sqlite3.Connection]:
+def init_metadata_dataset() -> Optional[ds.Dataset]:
     """
-    Initializes a zero-RAM on-disk SQLite index for instantaneous metadata lookups.
-    Uses streaming parquet chunks to keep peak memory < 20 MB during startup.
+    Initializes a zero-RAM on-disk Parquet dataset handle for instantaneous lookups.
+    Zero startup time, zero SQLite building, zero RAM overhead.
     """
     workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    candidates_db = [
-        os.path.join(workspace_dir, "data", "metadata.db"),
-        os.path.join(workspace_dir, "backend", "data", "metadata.db"),
-        os.path.join("data", "metadata.db"),
-        os.path.join("backend", "data", "metadata.db"),
-    ]
-    candidates_parquet = [
+    candidates = [
         os.path.join(workspace_dir, "data", "metadata.parquet"),
         os.path.join(workspace_dir, "backend", "data", "metadata.parquet"),
         os.path.join("data", "metadata.parquet"),
         os.path.join("backend", "data", "metadata.parquet"),
     ]
-
-    db_path = next((p for p in candidates_db if os.path.exists(p)), None)
-    parquet_path = next((p for p in candidates_parquet if os.path.exists(p)), None)
-
-    if not db_path and parquet_path:
-        target_db = os.path.join(os.path.dirname(parquet_path), "metadata.db")
-        print(f"Streaming lightweight SQLite index from {parquet_path}...")
-        try:
-            conn = sqlite3.connect(target_db)
-            cur = conn.cursor()
-            cur.execute("PRAGMA synchronous = OFF;")
-            cur.execute("PRAGMA journal_mode = MEMORY;")
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS products (
-                    name TEXT,
-                    combined_text TEXT,
-                    image TEXT,
-                    no_of_ratings TEXT,
-                    actual_price TEXT,
-                    discount_price TEXT
-                )
-            """)
-            parquet_file = pq.ParquetFile(parquet_path)
-            for batch in parquet_file.iter_batches(batch_size=25000, columns=["name", "sub_category", "image", "no_of_ratings", "actual_price", "discount_price"]):
-                names = batch["name"].to_pylist()
-                sub_cats = batch["sub_category"].to_pylist()
-                images = batch["image"].to_pylist()
-                ratings = batch["no_of_ratings"].to_pylist()
-                actuals = batch["actual_price"].to_pylist()
-                discounts = batch["discount_price"].to_pylist()
-
-                rows = []
-                for i in range(len(names)):
-                    n = names[i] or ""
-                    sc = sub_cats[i] or ""
-                    comb = f"{n} - {sc}".strip(" -")
-                    rows.append((n, comb, images[i], ratings[i], actuals[i], discounts[i]))
-
-                cur.executemany("INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)", rows)
-
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_comb ON products(combined_text);")
-            cur.execute("CREATE INDEX IF NOT EXISTS idx_name ON products(name);")
-            conn.commit()
-            conn.close()
-            db_path = target_db
-            print("SQLite metadata index initialized successfully.")
-        except Exception as e:
-            print(f"Warning building SQLite index: {e}")
-
-    if db_path and os.path.exists(db_path):
-        return sqlite3.connect(db_path, check_same_thread=False)
+    target_path = next((p for p in candidates if os.path.exists(p)), None)
+    if target_path:
+        print(f"Loaded 0-RAM metadata dataset from: {target_path}")
+        return ds.dataset(target_path, format="parquet")
+    print("Notice: metadata.parquet not found. Search will run with core vector metadata.")
     return None
 
 
@@ -180,7 +128,7 @@ def sanitize_pinecone_filter(filter_obj):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    global retriever_instance, db_connection
+    global retriever_instance, metadata_dataset
     print("Pre-initializing SelfQueryRetriever and connecting to Pinecone Cloud...")
     try:
         retriever_instance = initialize_self_query_retriever(search_k=500)
@@ -192,7 +140,7 @@ async def lifespan(app: FastAPI):
         raise err
 
     # Load rich product metadata into memory
-    db_connection = init_metadata_database()
+    metadata_dataset = init_metadata_dataset()
     yield
     print("Shutting down FastAPI application...")
 
@@ -213,6 +161,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    """
+    Root landing endpoint providing service health and interactive documentation links.
+    """
+    return {
+        "service": "SmartFind AI Product Search API",
+        "status": "online",
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "search_url": "POST /search",
+    }
 
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
@@ -309,36 +272,35 @@ async def search_products(payload: SearchRequest):
 
 
 
-        # 4. Fast 0-RAM metadata enrichment from SQLite index
+        # 4. Instant 0-RAM metadata enrichment from Parquet dataset
         metadata_map = {}
-        if db_connection and raw_docs:
+        if metadata_dataset and raw_docs:
             names_to_query = []
             for doc in raw_docs:
                 c = doc.page_content.strip()
                 n = c.split(" - ")[0].strip() if " - " in c else c
-                if c: names_to_query.append(c)
-                if n: names_to_query.append(n)
+                if n:
+                    names_to_query.append(n)
+                if c:
+                    names_to_query.append(c)
 
             unique_query_names = list(set(names_to_query))
             if unique_query_names:
                 try:
-                    cursor = db_connection.cursor()
-                    for chunk_start in range(0, len(unique_query_names), 400):
-                        chunk = unique_query_names[chunk_start : chunk_start + 400]
-                        placeholders = ",".join("?" * len(chunk))
-                        cursor.execute(
-                            f"SELECT name, combined_text, image, no_of_ratings, actual_price, discount_price FROM products WHERE name IN ({placeholders}) OR combined_text IN ({placeholders})",
-                            chunk + chunk,
-                        )
-                        for row in cursor.fetchall():
-                            info = {
-                                "image": row[2],
-                                "no_of_ratings": row[3],
-                                "actual_price": row[4],
-                                "discount_price": row[5],
-                            }
-                            if row[0]: metadata_map[row[0]] = info
-                            if row[1]: metadata_map[row[1]] = info
+                    filter_expr = ds.field("name").isin(unique_query_names)
+                    table = metadata_dataset.to_table(
+                        filter=filter_expr,
+                        columns=["name", "image", "no_of_ratings", "actual_price", "discount_price"],
+                    )
+                    for row in table.to_pylist():
+                        info = {
+                            "image": row["image"],
+                            "no_of_ratings": row["no_of_ratings"],
+                            "actual_price": row["actual_price"],
+                            "discount_price": row["discount_price"],
+                        }
+                        if row["name"]:
+                            metadata_map[row["name"]] = info
                 except Exception as db_err:
                     print(f"Metadata lookup warning: {db_err}")
 

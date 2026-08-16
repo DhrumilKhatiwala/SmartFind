@@ -5,7 +5,6 @@ from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
-from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
@@ -18,17 +17,11 @@ def download_and_get_local_embeddings(
     local_dir: str = LOCAL_MODEL_DIR,
 ) -> HuggingFaceEmbeddings:
     """
-    Downloads and loads local HuggingFace embedding model from models/ directory.
+    Loads HuggingFace embeddings directly on CPU with zero duplicate memory allocation.
     """
-    if not os.path.exists(local_dir):
-        print(f"Downloading model '{model_name}' into workspace folder: {local_dir}...")
-        os.makedirs(os.path.dirname(local_dir), exist_ok=True)
-        model = SentenceTransformer(model_name)
-        model.save(local_dir)
-        print("Model successfully downloaded and saved locally.")
-
+    target = local_dir if os.path.exists(local_dir) else model_name
     return HuggingFaceEmbeddings(
-        model_name=local_dir,
+        model_name=target,
         model_kwargs={"device": "cpu"},
         encode_kwargs={"normalize_embeddings": True},
     )
@@ -95,7 +88,6 @@ def store_documents_in_pinecone(
         ids=ids,
     )
     return vectorstore
-
 
 
 def load_pinecone_vector_db(
