@@ -1,4 +1,4 @@
-﻿---
+---
 title: SmartFind Backend API
 emoji: 🔍
 colorFrom: blue

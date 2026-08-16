@@ -1,7 +1,9 @@
-﻿huggingface_hub<0.25.0
+huggingface_hub<0.25.0
 sentence-transformers
 langchain-huggingface
 langchain-core
+langchain
+langchain-community
 langchain-pinecone
 pinecone
 langchain-google-genai

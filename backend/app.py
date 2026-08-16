@@ -1,4 +1,4 @@
-﻿import gradio as gr
+import gradio as gr
 from src.app import app as fastapi_app
 
 # Interactive Gradio test interface for Hugging Face preview
