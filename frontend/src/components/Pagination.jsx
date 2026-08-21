@@ -1,26 +1,19 @@
 import React from 'react';
 
 /**
- * Pagination component for navigating 48 items per page with page numbers and next/prev controls.
+ * Pagination component for navigating product results.
  */
-const Pagination = ({
-  currentPage,
-  totalPages,
-  totalItems,
-  itemsPerPage = 48,
-  onPageChange,
-}) => {
+const Pagination = ({ currentPage, totalPages, totalItems, pageSize, onPageChange }) => {
   if (totalPages <= 1) return null;
 
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const startItem = (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
 
-  // Generate page numbers array with ellipses for large page counts
+  // Generate responsive page number array
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 7;
 
-    if (totalPages <= maxVisiblePages) {
+    if (totalPages <= 5) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
@@ -30,11 +23,11 @@ const Pagination = ({
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
 
-      if (currentPage <= 3) {
+      if (currentPage <= 2) {
         start = 2;
-        end = 4;
-      } else if (currentPage >= totalPages - 2) {
-        start = totalPages - 3;
+        end = 3;
+      } else if (currentPage >= totalPages - 1) {
+        start = totalPages - 2;
         end = totalPages - 1;
       }
 
@@ -61,7 +54,7 @@ const Pagination = ({
   return (
     <nav style={styles.container} aria-label="Search results pagination">
       <div style={styles.summaryText}>
-        Showing <strong>{startItem}–{endItem}</strong> of <strong>{totalItems}</strong> products (Page {currentPage} of {totalPages})
+        Showing <strong>{startItem}–{endItem}</strong> of <strong>{totalItems.toLocaleString('en-IN')}</strong> products (Page {currentPage} of {totalPages})
       </div>
 
       <div style={styles.controls}>
@@ -77,7 +70,7 @@ const Pagination = ({
           }}
           aria-label="Go to previous page"
         >
-          ← Previous
+          ← Prev
         </button>
 
         {/* Page Numbers */}
@@ -134,53 +127,64 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '16px',
-    marginTop: '40px',
-    paddingTop: '24px',
+    gap: '14px',
+    marginTop: '32px',
+    paddingTop: '20px',
     borderTop: '1px solid #e2e8f0',
+    width: '100%',
+    minWidth: 0,
   },
   summaryText: {
-    fontSize: '0.88rem',
+    fontSize: '0.82rem',
     color: '#64748b',
+    textAlign: 'center',
+    lineHeight: '1.4',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
   },
   controls: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
     flexWrap: 'wrap',
     justifyContent: 'center',
+    maxWidth: '100%',
   },
   navButton: {
-    padding: '8px 16px',
+    padding: '7px 12px',
     backgroundColor: '#ffffff',
     border: '1.5px solid #cbd5e1',
     borderRadius: '10px',
     color: '#0f172a',
-    fontSize: '0.84rem',
+    fontSize: '0.8rem',
     fontWeight: '600',
     transition: 'all 0.15s ease',
     fontFamily: 'inherit',
+    flexShrink: 0,
   },
   pagesList: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '4px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   pageButton: {
-    width: '38px',
-    height: '38px',
+    width: '34px',
+    height: '34px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
     border: '1.5px solid #e2e8f0',
-    borderRadius: '10px',
+    borderRadius: '8px',
     color: '#334155',
-    fontSize: '0.86rem',
+    fontSize: '0.82rem',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     fontFamily: 'inherit',
+    flexShrink: 0,
   },
   activePageButton: {
     backgroundColor: '#4f46e5',
@@ -190,9 +194,9 @@ const styles = {
     boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
   },
   dots: {
-    padding: '0 4px',
+    padding: '0 2px',
     color: '#94a3b8',
-    fontSize: '0.88rem',
+    fontSize: '0.8rem',
     fontWeight: '700',
   },
 };

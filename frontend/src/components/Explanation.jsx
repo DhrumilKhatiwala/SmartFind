@@ -36,9 +36,11 @@ const Explanation = ({ explanation, isOpen, onToggle }) => {
 
 const styles = {
   container: {
-    marginTop: '12px',
-    paddingTop: '10px',
+    marginTop: '10px',
+    paddingTop: '8px',
     borderTop: '1px dashed #e2e8f0',
+    width: '100%',
+    minWidth: 0,
   },
   toggleButton: {
     width: '100%',
@@ -57,17 +59,21 @@ const styles = {
     transition: 'color 0.15s ease',
   },
   label: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     gap: '5px',
+    minWidth: 0,
+    fontSize: '0.78rem',
   },
   icon: {
-    fontSize: '0.9rem',
+    fontSize: '0.85rem',
+    flexShrink: 0,
   },
   chevron: {
     fontSize: '0.65rem',
     color: '#6366f1',
     marginLeft: '6px',
+    flexShrink: 0,
   },
   contentBox: {
     marginTop: '8px',
@@ -76,13 +82,19 @@ const styles = {
     borderRadius: '10px',
     border: '1px solid #e2e8f0',
     animation: 'fadeIn 0.2s ease-in-out',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
   },
   text: {
-    fontSize: '0.78rem',
+    fontSize: '0.76rem',
     color: '#334155',
-    lineHeight: '1.45',
+    lineHeight: '1.5',
     margin: 0,
     fontWeight: '500',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
+    hyphens: 'auto',
   },
 };
 

@@ -13,9 +13,8 @@ import ErrorState from './components/ErrorState';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 const ITEMS_PER_PAGE = 48;
 
-
 const sampleQueries = [
-  'headphones under ₹1500 with rating above 4',
+  'headphones under ₹1,500 with rating above 4',
   'phones under 20000 with rating above 4',
   'inverter split AC 1.5 ton under 40000',
   'running shoes with rating above 4.2',
@@ -137,7 +136,6 @@ const ProductSearch = () => {
     }, 50);
   };
 
-
   const toggleExplanation = (index) => {
     setExpandedExplanations((prev) => ({
       ...prev,
@@ -189,7 +187,7 @@ const ProductSearch = () => {
           {/* Results Summary Header */}
           <ResultsHeader count={results.length} query={submittedQuery} />
 
-          {/* Responsive 4-Column Product Cards Grid (4 in a row on desktop) */}
+          {/* Responsive Product Cards Grid */}
           <div className="product-grid">
             {paginatedResults.map((product, index) => {
               const globalIndex = startIndex + index;
@@ -205,12 +203,12 @@ const ProductSearch = () => {
             })}
           </div>
 
-          {/* Pagination Controls (48 items per page) */}
+          {/* Pagination Controls */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={results.length}
-            itemsPerPage={ITEMS_PER_PAGE}
+            pageSize={ITEMS_PER_PAGE}
             onPageChange={handlePageChange}
           />
         </section>
@@ -234,15 +232,19 @@ const styles = {
   container: {
     maxWidth: '1440px',
     margin: '0 auto',
-    padding: '40px 24px 80px 24px',
+    padding: '36px 20px 72px 20px',
     color: '#0f172a',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    minWidth: 0,
+    width: '100%',
+    boxSizing: 'border-box',
   },
   resultsSection: {
     marginTop: '16px',
     scrollMarginTop: '20px',
+    width: '100%',
+    minWidth: 0,
   },
 };
 
 export default ProductSearch;
-

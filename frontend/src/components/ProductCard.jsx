@@ -32,7 +32,6 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
   const { price, rating, category, image, no_of_ratings, actual_price } =
     product?.metadata || {};
 
-
   // Reset image error state whenever the product or image changes
   useEffect(() => {
     setImageError(false);
@@ -56,7 +55,6 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
             loading="lazy"
           />
         ) : (
-
           <div style={styles.imagePlaceholder}>
             <svg
               width="36"
@@ -74,16 +72,20 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
           </div>
         )}
 
-        {/* Category Badge */}
+        {/* Category Badge with overflow protection */}
         <div style={styles.floatingBadges}>
-          <span style={styles.categoryBadge}>{category || 'Product'}</span>
+          <span style={styles.categoryBadge} title={category || 'Product'}>
+            {category || 'Product'}
+          </span>
         </div>
       </div>
 
       {/* Card Content Details */}
       <div style={styles.cardContent}>
         {subCategory && (
-          <span style={styles.subCategoryBadge}>{subCategory}</span>
+          <span style={styles.subCategoryBadge} title={subCategory}>
+            {subCategory}
+          </span>
         )}
 
         <h3 style={styles.productTitle} title={title}>
@@ -121,7 +123,7 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
 
         {/* Explainability Accordion */}
         <Explanation
-          explanation={product.explanation}
+          explanation={product?.explanation}
           isOpen={isExplanationOpen}
           onToggle={onToggleExplanation}
         />
@@ -141,6 +143,9 @@ const styles = {
     boxShadow: '0 3px 12px rgba(0, 0, 0, 0.04)',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease',
     height: 'fit-content',
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
   },
   imageContainer: {
     position: 'relative',
@@ -152,6 +157,7 @@ const styles = {
     justifyContent: 'center',
     padding: '16px',
     borderBottom: '1px solid #f1f5f9',
+    overflow: 'hidden',
   },
   productImage: {
     maxWidth: '100%',
@@ -172,97 +178,117 @@ const styles = {
   },
   floatingBadges: {
     position: 'absolute',
-    top: '12px',
-    left: '12px',
+    top: '10px',
+    left: '10px',
+    maxWidth: 'calc(100% - 20px)',
+    zIndex: 1,
   },
   categoryBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    display: 'inline-block',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     color: '#4338ca',
-    fontSize: '0.72rem',
+    fontSize: '0.7rem',
     fontWeight: '700',
-    padding: '4px 10px',
+    padding: '4px 8px',
     borderRadius: '6px',
     textTransform: 'capitalize',
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     backdropFilter: 'blur(4px)',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   cardContent: {
-    padding: '18px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     flex: '1',
+    minWidth: 0,
   },
   subCategoryBadge: {
     display: 'inline-block',
     backgroundColor: '#f1f5f9',
     color: '#64748b',
-    fontSize: '0.72rem',
+    fontSize: '0.7rem',
     fontWeight: '600',
     padding: '3px 8px',
     borderRadius: '4px',
     marginBottom: '8px',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
     width: 'fit-content',
   },
   productTitle: {
-    fontSize: '0.96rem',
+    fontSize: '0.94rem',
     fontWeight: '600',
     color: '#0f172a',
-    margin: '0 0 12px 0',
+    margin: '0 0 10px 0',
     lineHeight: '1.45',
     display: '-webkit-box',
     WebkitLineClamp: '2',
     WebkitBoxOrient: 'vertical',
     overflow: 'hidden',
-    minHeight: '2.9em',
+    minHeight: '2.8em',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
   },
   ratingRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    marginBottom: '12px',
+    marginBottom: '10px',
+    flexWrap: 'wrap',
   },
   ratingBadge: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     gap: '4px',
     backgroundColor: '#fef9c3',
     border: '1px solid #fef08a',
-    padding: '2px 8px',
+    padding: '2px 7px',
     borderRadius: '6px',
+    flexShrink: 0,
   },
   starIcon: {
     color: '#eab308',
-    fontSize: '0.82rem',
+    fontSize: '0.8rem',
   },
   ratingValue: {
-    fontSize: '0.82rem',
+    fontSize: '0.8rem',
     fontWeight: '700',
     color: '#854d0e',
   },
   reviewsCount: {
-    fontSize: '0.78rem',
+    fontSize: '0.75rem',
     color: '#64748b',
+    overflowWrap: 'break-word',
   },
   priceRow: {
     display: 'flex',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    marginBottom: '12px',
+    marginBottom: '10px',
     paddingTop: '8px',
     borderTop: '1px solid #f8fafc',
+    flexWrap: 'wrap',
+    gap: '6px',
   },
   priceContainer: {
     display: 'flex',
     alignItems: 'baseline',
     gap: '8px',
+    flexWrap: 'wrap',
   },
   priceValue: {
-    fontSize: '1.32rem',
+    fontSize: '1.25rem',
     fontWeight: '800',
     color: '#0f172a',
   },
   actualPrice: {
-    fontSize: '0.85rem',
+    fontSize: '0.82rem',
     color: '#94a3b8',
     textDecoration: 'line-through',
     fontWeight: '500',

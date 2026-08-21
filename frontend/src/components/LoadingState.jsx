@@ -11,7 +11,7 @@ const LoadingState = () => {
         <div style={styles.statusContent}>
           <h3 style={styles.statusTitle}>Analyzing query...</h3>
           <p style={styles.statusSubtitle}>
-            Gemini is parsing constraints and searching 36,000+ vector embeddings
+            SmartFind is parsing constraints and searching vector embeddings...
           </p>
         </div>
       </div>

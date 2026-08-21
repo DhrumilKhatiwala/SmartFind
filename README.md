@@ -1,6 +1,6 @@
-<div align="center">
-
 # SmartFind — AI-Powered Product Search Engine
+
+<div align="center">
 
 **Natural-language e-commerce search with automatic budget, rating, and category filtering.**
 
@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Python-3.10-3776AB?style=flat&logo=python&logoColor=white" alt="Python 3.10" />
   <img src="https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/LangChain-1C3C3C?style=flat&logo=langchain&logoColor=white" alt="LangChain" />
-  <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat&logo=googlegemini&logoColor=white" alt="Google Gemini" />
+  <img src="https://img.shields.io/badge/Groq-F55036?style=flat&logo=groq&logoColor=white" alt="Groq" />
   <img src="https://img.shields.io/badge/Pinecone-000000?style=flat&logo=pinecone&logoColor=white" alt="Pinecone" />
   <img src="https://img.shields.io/badge/React_18-20232A?style=flat&logo=react&logoColor=61DAFB" alt="React 18" />
   <img src="https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white" alt="Vite" />
@@ -65,7 +65,7 @@ Traditional search systems and basic vector search engines struggle with natural
 
 ```mermaid
 flowchart LR
-    A["User Query\n'headphones under ₹1500'"] --> B["LLM Query Parser\n(Gemini)"]
+    A["User Query\n'headphones under ₹1500'"] --> B["LLM Query Parser\n(Groq Cloud)"]
     B --> C["Structured Search\nQuery: 'headphones'\nFilter: price <= 1500"]
     C --> D["Pinecone Vector Database\n(Single-Pass Filtered Search)"]
     D --> E["FastAPI Backend\n(Metadata Enrichment)"]
@@ -73,7 +73,7 @@ flowchart LR
 ```
 
 1. **User Query**: The user types a natural-language search into the search bar.
-2. **Query Understanding**: Google Gemini parses the sentence and separates the product keywords from the numeric constraints (e.g., `price <= 1500`, `rating >= 4.0`).
+2. **Query Understanding**: Groq Cloud (`openai/gpt-oss-120b`) parses the sentence in ~150ms and separates the product keywords from numeric constraints (e.g., `price <= 1500`, `rating >= 4.0`).
 3. **Filtered Vector Search**: Pinecone runs a vector search on the product meaning while applying the filters directly on the database nodes.
 4. **Enrichment & Formatting**: FastAPI retrieves product images, discounts, and ratings from the local dataset.
 5. **Results & Explanation**: The frontend displays product cards along with a clear explanation of why each product matched the query.
@@ -99,7 +99,7 @@ flowchart LR
 | **React 18 & Vite** | Frontend user interface and responsive styling |
 | **FastAPI & Uvicorn** | High-performance Python backend REST API |
 | **LangChain** | Self-querying retrieval orchestration and AST filter translation |
-| **Google Gemini** | Natural-language query parsing and constraint extraction |
+| **Groq Cloud** | High-speed query parsing and constraint extraction (`openai/gpt-oss-120b`, ~150ms) |
 | **Pinecone Cloud** | Serverless vector database for vector similarity search |
 | **FastEmbed (ONNX)** | Lightweight CPU embedding engine (`all-MiniLM-L6-v2`, 384 dimensions) |
 | **PyArrow & Parquet** | Fast on-disk product metadata lookups with minimal memory usage |
@@ -137,7 +137,6 @@ To verify whether constraint-aware retrieval actually performs better than stand
 ### What These Numbers Mean:
 - **Constraint Satisfaction (30.0% → 100.0%)**: In baseline vector search, 70% of returned items broke the user's price or rating rules. SmartFind ensures 100% of returned products respect every constraint.
 - **Query Success Rate (8.3% → 100.0%)**: Only 8.3% of queries in baseline search returned a completely clean page of results. SmartFind returned 100% compliant pages across all 60 test queries.
-- **Tradeoff**: SmartFind takes ~2.0 seconds per query (compared to ~0.38 seconds for basic vector search) because the LLM needs to parse the query before searching.
 
 ---
 
@@ -148,7 +147,7 @@ SmartFind/
 ├── backend/
 │   ├── src/
 │   │   ├── app.py              # FastAPI application, search endpoints, and Parquet lookup
-│   │   ├── retriever.py        # SelfQueryRetriever initialization with Gemini
+│   │   ├── retriever.py        # SelfQueryRetriever initialization with Groq
 │   │   ├── schema.py           # Product metadata schema and field descriptions
 │   │   └── vectorstore.py      # Pinecone connection and FastEmbed ONNX wrapper
 │   ├── data/
@@ -156,7 +155,7 @@ SmartFind/
 │   ├── scripts/
 │   │   ├── run_batch_indexing.py # Pinecone vector indexing script
 │   │   └── preprocess_data.py  # Data cleaning and parquet compression
-│   └── requirements.txt        # Backend dependencies (FastAPI, Pinecone, LangChain)
+│   └── requirements.txt        # Backend dependencies (FastAPI, Pinecone, LangChain, Groq)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/         # SearchBar, ProductCard, Pagination, Header
@@ -181,7 +180,7 @@ SmartFind/
 - Python 3.10+
 - Node.js 18+
 - A free [Pinecone](https://www.pinecone.io/) account and API key
-- A free [Google AI Studio](https://aistudio.google.com/) Gemini API key
+- A free [Groq Cloud](https://console.groq.com/) API key
 
 ### 1. Clone the Repository
 ```bash
@@ -203,9 +202,9 @@ pip install -r requirements.txt
 
 Create a `.env` file in the `backend/` folder:
 ```env
+GROQ_API_KEY=your_groq_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_INDEX_NAME=ecommerce-products
-GEMINI_API_KEY=your_gemini_api_key
 ```
 
 Run the backend server:
@@ -253,15 +252,14 @@ SmartFind demonstrates how to combine **natural-language understanding** with **
 
 ## ⚠️ Limitations
 
-- **Latency**: Query parsing with an LLM adds ~1.5 seconds of overhead compared to basic keyword search.
+- **LLM Dependency**: Requires a live Groq API connection for natural-language query decomposition.
 - **Static Dataset**: The current demonstration uses a static snapshot of Amazon products rather than a live inventory stream.
-- **Model Availability**: The free tier of Gemini has per-minute request limits during continuous batch evaluation.
 
 ---
 
 ## 🔮 Future Improvements
 
-- [ ] **Semantic Caching**: Cache common query decompositions in Redis to reduce search latency to under 100ms.
+- [ ] **Semantic Caching**: Cache common query decompositions in Redis to reduce search latency to under 50ms.
 - [ ] **Hybrid Search**: Combine lexical BM25 keyword matching with dense vectors for brand code searches (e.g., exact model numbers).
 - [ ] **Conversational Refinement**: Allow users to refine results across multiple chat turns (e.g., *"show me cheaper ones"*).
 

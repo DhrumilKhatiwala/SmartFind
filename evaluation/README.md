@@ -1,6 +1,6 @@
-# 📊 SmartFind Retrieval Evaluation & Benchmarking Module
+﻿# 📊 SmartFind Retrieval Evaluation & Benchmarking Module
 
-This module provides a rigorous, automated benchmarking framework to evaluate the retrieval quality of **SmartFind** (*LangChain SelfQueryRetriever + Google Gemini + Pinecone Cloud Vector Store*) against **Baseline Dense Vector Search** (*semantic similarity without metadata filters*).
+This module provides a rigorous, automated benchmarking framework to evaluate the retrieval quality of **SmartFind** (*LangChain SelfQueryRetriever + Groq LLM + Pinecone Cloud Vector Store*) against **Baseline Dense Vector Search** (*semantic similarity without metadata filters*).
 
 ---
 
@@ -46,7 +46,7 @@ $$\text{Precision@}K = \frac{1}{|Q|} \sum_{i=1}^{|Q|} \frac{\sum_{j=1}^{K} \math
 
 ## 🚀 Running the Benchmark
 
-Ensure your virtual environment is activated and your `backend/.env` file contains your `GEMINI_API_KEY` and `PINECONE_API_KEY`.
+Ensure your virtual environment is activated and your `backend/.env` file contains your `GROQ_API_KEY` and `PINECONE_API_KEY`.
 
 Run the evaluation script from the project root:
 

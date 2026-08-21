@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import sys
 import time
@@ -32,7 +32,7 @@ def run_retrieval_evaluation(
     queries_file: str = "evaluation/queries.json",
     k_values: List[int] = [3, 5],
     max_queries: Optional[int] = None,
-    delay_between_queries_sec: float = 1.0,
+    delay_between_queries_sec: float = 0.2,
 ) -> Dict[str, Any]:
     """
     Executes the full comparative benchmark between Baseline Vector Search
@@ -54,14 +54,14 @@ def run_retrieval_evaluation(
     print(f"Evaluated K values: {k_values}", flush=True)
     print(f"Vector Database   : Pinecone Cloud Serverless", flush=True)
     print(f"Embedding Engine  : FastEmbed (all-MiniLM-L6-v2 ONNX)", flush=True)
-    print(f"Query LLM Parser  : Google Gemini (gemini-3.5-flash-lite)", flush=True)
+    print(f"Query LLM Parser  : Groq Cloud (openai/gpt-oss-120b)", flush=True)
     print("-" * 65, flush=True)
 
     # 1. Initialize Vectorstore and Retriever
     print("Connecting to Pinecone Vectorstore...", flush=True)
     vectorstore = load_pinecone_vector_db()
-    print("Initializing Gemini SelfQueryRetriever...", flush=True)
-    retriever = initialize_self_query_retriever(model_name="gemini-3.5-flash-lite", search_k=max(k_values))
+    print("Initializing Groq SelfQueryRetriever...", flush=True)
+    retriever = initialize_self_query_retriever(model_name="openai/gpt-oss-120b", search_k=max(k_values))
 
     baseline_results: List[List[Dict[str, Any]]] = []
     smartfind_results: List[List[Dict[str, Any]]] = []
@@ -146,7 +146,7 @@ def run_retrieval_evaluation(
 
         smartfind_results.append(formatted_smart)
 
-        # Rate-limiting pause
+        # Small pause
         if delay_between_queries_sec > 0:
             time.sleep(delay_between_queries_sec)
 
@@ -206,7 +206,7 @@ def run_retrieval_evaluation(
         },
         "smartfind_self_query": {
             "name": "SmartFind (Self-Querying Retrieval)",
-            "description": "Two-phase retrieval: Gemini LLM AST query decomposition + Pinecone single-pass boolean filtering",
+            "description": "Two-phase retrieval: Groq LLM AST query decomposition + Pinecone single-pass boolean filtering",
             "mean_latency_ms": round(avg_smartfind_lat, 2),
             "metrics": smartfind_metrics,
         },
@@ -251,12 +251,13 @@ def generate_markdown_report(data: Dict[str, Any], output_file: str):
 **Evaluated Queries**: {data['total_queries']} natural-language shopping queries  
 **Dataset Scale**: 258,911 real-world Amazon e-commerce products  
 **Vector Database**: Pinecone Cloud Serverless (384 dimensions, Cosine metric)  
+**Query LLM Parser**: Groq Cloud (`openai/gpt-oss-120b`)  
 
 ---
 
 ## 🎯 Executive Summary
 
-This empirical benchmark rigorously compares **Baseline Dense Vector Search** (*semantic similarity without metadata filters*) against **SmartFind Constraint-Aware Retrieval** (*LangChain SelfQueryRetriever + Google Gemini + Pinecone boolean metadata filtering*).
+This empirical benchmark rigorously compares **Baseline Dense Vector Search** (*semantic similarity without metadata filters*) against **SmartFind Constraint-Aware Retrieval** (*LangChain SelfQueryRetriever + Groq LLM + Pinecone boolean metadata filtering*).
 
 The evaluation proves that while pure vector search correctly captures semantic categories (e.g. returning headphones for a headphone query), **it frequently violates numerical price, rating, and categorical constraints**, returning expensive or low-rated products. **SmartFind resolves this with single-pass constraint filtering, boosting precision and query satisfaction.**
 
@@ -291,7 +292,7 @@ The evaluation proves that while pure vector search correctly captures semantic 
 ## 💡 Engineering Insights & Takeaways
 
 1. **The Vector Search Dilemma**: Vector embeddings excel at fuzzy matching (*e.g., mapping "gym shoes" to "sneakers"*), but cannot perform numerical comparison. A ₹65,000 laptop has nearly identical text embedding to a ₹35,000 laptop.
-2. **Self-Querying Eliminates Hallucinated Constraints**: Gemini 3.6 Flash dynamically constructs AST filter trees (`price <= 2000`, `rating >= 4.0`) that execute directly within Pinecone's serverless vector engine.
+2. **Self-Querying Eliminates Hallucinated Constraints**: Groq Cloud (`openai/gpt-oss-120b`) dynamically constructs AST filter trees (`price <= 2000`, `rating >= 4.0`) that execute directly within Pinecone's serverless vector engine.
 3. **Single-Pass Efficiency**: Rather than post-filtering after retrieval (which often results in zero returned items), Pinecone traverses the vector graph only across nodes satisfying the boolean filters.
 """
     with open(output_file, "w", encoding="utf-8") as f:

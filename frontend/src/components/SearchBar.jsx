@@ -39,7 +39,7 @@ const SearchBar = ({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Try: headphones under ₹1500 with rating above 4"
+            placeholder="Try: headphones under ₹1,500 with rating above 4"
             style={styles.input}
             disabled={loading}
             aria-label="Search products naturally with natural language filters"
@@ -72,7 +72,7 @@ const SearchBar = ({
           {loading ? (
             <span style={styles.btnLoading}>
               <span style={styles.spinner}></span>
-              Analyzing query...
+              Searching...
             </span>
           ) : (
             'Search'
@@ -110,13 +110,15 @@ const styles = {
   container: {
     width: '100%',
     maxWidth: '860px',
-    margin: '0 auto 28px auto',
+    margin: '0 auto 24px auto',
+    minWidth: 0,
   },
   form: {
     display: 'flex',
-    gap: '12px',
+    gap: '10px',
     alignItems: 'center',
     width: '100%',
+    minWidth: 0,
   },
   inputWrapper: {
     position: 'relative',
@@ -124,17 +126,19 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     width: '100%',
+    minWidth: 0,
   },
   searchIcon: {
     position: 'absolute',
-    left: '16px',
+    left: '14px',
     color: '#6366f1',
     pointerEvents: 'none',
+    flexShrink: 0,
   },
   input: {
     width: '100%',
-    padding: '14px 75px 14px 48px',
-    fontSize: '0.98rem',
+    padding: '13px 68px 13px 44px',
+    fontSize: '0.94rem',
     borderRadius: '14px',
     border: '1.5px solid #cbd5e1',
     backgroundColor: '#ffffff',
@@ -143,25 +147,28 @@ const styles = {
     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     fontFamily: 'inherit',
+    minWidth: 0,
+    boxSizing: 'border-box',
   },
   clearBtn: {
     position: 'absolute',
-    right: '12px',
-    padding: '5px 10px',
+    right: '10px',
+    padding: '5px 9px',
     backgroundColor: '#f1f5f9',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
     color: '#64748b',
-    fontSize: '0.78rem',
+    fontSize: '0.75rem',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
+    flexShrink: 0,
   },
   submitBtn: {
-    padding: '14px 26px',
+    padding: '13px 24px',
     backgroundColor: '#4f46e5',
     color: '#ffffff',
-    fontSize: '0.96rem',
+    fontSize: '0.94rem',
     fontWeight: '700',
     borderRadius: '14px',
     border: 'none',
@@ -169,6 +176,7 @@ const styles = {
     transition: 'background-color 0.2s ease, transform 0.1s ease',
     whiteSpace: 'nowrap',
     fontFamily: 'inherit',
+    flexShrink: 0,
   },
   btnLoading: {
     display: 'flex',
@@ -186,33 +194,43 @@ const styles = {
   },
   suggestionsContainer: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginTop: '14px',
+    alignItems: 'flex-start',
+    gap: '8px',
+    marginTop: '12px',
     flexWrap: 'wrap',
+    width: '100%',
+    minWidth: 0,
   },
   suggestionLabel: {
-    fontSize: '0.8rem',
+    fontSize: '0.78rem',
     color: '#64748b',
     fontWeight: '600',
+    paddingTop: '4px',
+    flexShrink: 0,
   },
   chipList: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '8px',
+    gap: '6px',
+    flex: 1,
+    minWidth: 0,
   },
   chip: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
-    padding: '5px 12px',
-    borderRadius: '20px',
-    fontSize: '0.78rem',
+    padding: '4px 10px',
+    borderRadius: '16px',
+    fontSize: '0.76rem',
     color: '#475569',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
     fontFamily: 'inherit',
     fontWeight: '500',
+    maxWidth: '100%',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
+    textAlign: 'left',
   },
 };
 
