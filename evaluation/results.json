@@ -1,0 +1,39 @@
+{
+  "benchmark_timestamp": "2026-08-19T21:04:18.608929",
+  "total_queries": 60,
+  "k_values": [
+    3,
+    5
+  ],
+  "baseline_vector_search": {
+    "name": "Baseline Vector Similarity Search",
+    "description": "Standard dense vector search in Pinecone without metadata filtering",
+    "mean_latency_ms": 378.69,
+    "metrics": {
+      "constraint_satisfaction_rate_k3": 29.44,
+      "query_success_rate_k3": 15.0,
+      "precision_at_3": 29.44,
+      "constraint_satisfaction_rate_k5": 30.0,
+      "query_success_rate_k5": 8.33,
+      "precision_at_5": 30.0
+    }
+  },
+  "smartfind_self_query": {
+    "name": "SmartFind (Self-Querying Retrieval)",
+    "description": "Two-phase retrieval: Gemini LLM AST query decomposition + Pinecone single-pass boolean filtering",
+    "mean_latency_ms": 2033.02,
+    "metrics": {
+      "constraint_satisfaction_rate_k3": 100.0,
+      "query_success_rate_k3": 100.0,
+      "precision_at_3": 100.0,
+      "constraint_satisfaction_rate_k5": 100.0,
+      "query_success_rate_k5": 100.0,
+      "precision_at_5": 100.0
+    }
+  },
+  "improvements": {
+    "constraint_satisfaction_diff_k5_pct_points": 70.0,
+    "query_success_rate_diff_k5_pct_points": 91.67,
+    "precision_at_5_diff_pct_points": 70.0
+  }
+}
