@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import Explanation from './Explanation';
+import { IconStar, IconCheckCircle } from './Icons';
 
 /**
- * ProductCard renders an individual product with image, ratings, price, and match explanation.
+ * ProductCard renders an individual product with image, ratings, price,
+ * constraint match indicator, and match explanation.
  */
-const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation }) => {
+const ProductCard = ({
+  product,
+  index,
+  hasActiveConstraints = false,
+  isExplanationOpen,
+  onToggleExplanation,
+}) => {
   const [imageError, setImageError] = useState(false);
 
   const formatPrice = (priceVal) => {
@@ -72,11 +80,17 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
           </div>
         )}
 
-        {/* Category Badge with overflow protection */}
+        {/* Floating Category & Constraint Badges */}
         <div style={styles.floatingBadges}>
           <span style={styles.categoryBadge} title={category || 'Product'}>
             {category || 'Product'}
           </span>
+          {hasActiveConstraints && (
+            <span style={styles.constraintMatchBadge} title="Product satisfies all numeric and category filter constraints">
+              <IconCheckCircle size={12} color="#059669" style={{ marginRight: '4px' }} />
+              Matches constraints
+            </span>
+          )}
         </div>
       </div>
 
@@ -95,7 +109,7 @@ const ProductCard = ({ product, index, isExplanationOpen, onToggleExplanation })
         {/* Rating & Review Count */}
         <div style={styles.ratingRow}>
           <div style={styles.ratingBadge}>
-            <span style={styles.starIcon}>★</span>
+            <IconStar size={13} color="#eab308" fill="#eab308" />
             <span style={styles.ratingValue}>
               {rating !== null && rating !== undefined
                 ? Number(rating).toFixed(1)
@@ -180,8 +194,13 @@ const styles = {
     position: 'absolute',
     top: '10px',
     left: '10px',
-    maxWidth: 'calc(100% - 20px)',
+    right: '10px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '6px',
     zIndex: 1,
+    pointerEvents: 'none',
   },
   categoryBadge: {
     display: 'inline-block',
@@ -189,15 +208,31 @@ const styles = {
     color: '#4338ca',
     fontSize: '0.7rem',
     fontWeight: '700',
-    padding: '4px 8px',
+    padding: '3px 8px',
     borderRadius: '6px',
     textTransform: 'capitalize',
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     backdropFilter: 'blur(4px)',
-    maxWidth: '100%',
+    maxWidth: '55%',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    pointerEvents: 'auto',
+  },
+  constraintMatchBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    backgroundColor: 'rgba(236, 253, 245, 0.96)',
+    color: '#065f46',
+    border: '1px solid #a7f3d0',
+    fontSize: '0.68rem',
+    fontWeight: '700',
+    padding: '3px 7px',
+    borderRadius: '6px',
+    boxShadow: '0 2px 6px rgba(6, 95, 70, 0.08)',
+    backdropFilter: 'blur(4px)',
+    whiteSpace: 'nowrap',
+    pointerEvents: 'auto',
   },
   cardContent: {
     padding: '16px',
@@ -251,10 +286,6 @@ const styles = {
     padding: '2px 7px',
     borderRadius: '6px',
     flexShrink: 0,
-  },
-  starIcon: {
-    color: '#eab308',
-    fontSize: '0.8rem',
   },
   ratingValue: {
     fontSize: '0.8rem',

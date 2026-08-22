@@ -11,17 +11,23 @@ except ImportError:
 metadata_field_info = [
     AttributeInfo(
         name="price",
-        description="The price of the e-commerce product in INR (Indian Rupees). Use for filtering products by cost (e.g., price < 30000 or price >= 500).",
+        description="The price of the e-commerce product in INR (Indian Rupees). Use for numerical budget filtering (e.g., price < 45000 or price >= 500).",
         type="float",
     ),
     AttributeInfo(
         name="rating",
-        description="The average customer rating of the product on a 0.0 to 5.0 scale. Use for filtering by customer satisfaction or minimum quality score.",
+        description="The average customer rating on a 0.0 to 5.0 scale. Use for filtering by minimum rating or star satisfaction score.",
         type="float",
     ),
     AttributeInfo(
         name="category",
-        description="The main department or category of the product (e.g., 'tv, audio & cameras', 'appliances', 'car & motorbike', 'sports & fitness', 'home & kitchen', 'accessories', 'bags & luggage', 'beauty & health'). Use for filtering by department.",
+        description=(
+            "The exact indexed department of the product. MUST be one of these exact values: "
+            "'tv, audio & cameras' (for electronics, laptops, computers, headphones, smartphones, TVs, gadgets), "
+            "'appliances' (for air fryers, refrigerators, washing machines, microwaves, ACs), "
+            "'home & kitchen', 'men\'s shoes', 'women\'s shoes', 'men\'s clothing', "
+            "'kids\' fashion', 'beauty & health', 'sports & fitness', 'toys & baby products', 'accessories'."
+        ),
         type="string",
     ),
 ]

@@ -40,7 +40,7 @@
 
 SmartFind is an e-commerce search engine that lets users search for products using plain, everyday language while automatically applying strict budget, rating, and category requirements.
 
-When shopping online, people rarely search using just single keywords. Instead, they search with natural sentences like *"wireless headphones under ₹1,500 with rating above 4 stars"*. 
+When shopping online, people rarely search using just single keywords. Instead, they search with natural sentences like _"wireless headphones under ₹1,500 with rating above 4 stars"_.
 
 SmartFind uses an LLM to separate the user's intent into two parts: **what the product is** (semantic search) and **what rules it must follow** (price ceilings, minimum ratings, and departments). It searches over 258,000 products and only returns items that match both the concept and the exact numbers.
 
@@ -50,11 +50,12 @@ SmartFind uses an LLM to separate the user's intent into two parts: **what the p
 
 Traditional search systems and basic vector search engines struggle with natural shopping queries:
 
-- **Keyword Search** fails when users use synonyms or conversational phrases (e.g., searching *"budget gym shoes"* might miss items titled *"athletic running sneakers"*).
-- **Basic Vector Search** understands meaning, but it cannot do math. Because embeddings only measure text similarity, a vector search for *"headphones under ₹1,500"* often returns ₹14,000 studio headphones simply because the text description looks similar.
+- **Keyword Search** fails when users use synonyms or conversational phrases (e.g., searching _"budget gym shoes"_ might miss items titled _"athletic running sneakers"_).
+- **Basic Vector Search** understands meaning, but it cannot do math. Because embeddings only measure text similarity, a vector search for _"headphones under ₹1,500"_ often returns ₹14,000 studio headphones simply because the text description looks similar.
 
 ### Example:
-> **Search Query:** *"Headphones under ₹1,500 with rating above 4"*
+
+> **Search Query:** _"Headphones under ₹1,500 with rating above 4"_
 >
 > - **Normal Vector Search:** Returns top-rated ₹8,000 headphones because they are high quality and match the word "headphones" (violates the ₹1,500 budget).
 > - **SmartFind:** Searches for "headphones", but strictly filters the database so only items with `price <= 1500` and `rating >= 4.0` can ever be returned.
@@ -94,15 +95,15 @@ flowchart LR
 
 ## 🛠️ Tech Stack
 
-| Technology | Purpose |
-| :--- | :--- |
-| **React 18 & Vite** | Frontend user interface and responsive styling |
-| **FastAPI & Uvicorn** | High-performance Python backend REST API |
-| **LangChain** | Self-querying retrieval orchestration and AST filter translation |
-| **Groq Cloud** | High-speed query parsing and constraint extraction (`openai/gpt-oss-120b`, ~150ms) |
-| **Pinecone Cloud** | Serverless vector database for vector similarity search |
-| **FastEmbed (ONNX)** | Lightweight CPU embedding engine (`all-MiniLM-L6-v2`, 384 dimensions) |
-| **PyArrow & Parquet** | Fast on-disk product metadata lookups with minimal memory usage |
+| Technology            | Purpose                                                                            |
+| :-------------------- | :--------------------------------------------------------------------------------- |
+| **React 18 & Vite**   | Frontend user interface and responsive styling                                     |
+| **FastAPI & Uvicorn** | High-performance Python backend REST API                                           |
+| **LangChain**         | Self-querying retrieval orchestration and AST filter translation                   |
+| **Groq Cloud**        | High-speed query parsing and constraint extraction (`openai/gpt-oss-120b`, ~150ms) |
+| **Pinecone Cloud**    | Serverless vector database for vector similarity search                            |
+| **FastEmbed (ONNX)**  | Lightweight CPU embedding engine (`all-MiniLM-L6-v2`, 384 dimensions)              |
+| **PyArrow & Parquet** | Fast on-disk product metadata lookups with minimal memory usage                    |
 
 ---
 
@@ -122,19 +123,20 @@ To verify whether constraint-aware retrieval actually performs better than stand
 
 ### Benchmark Results ($K=5$)
 
-| Metric | Baseline Vector Search | SmartFind (Self-Query) | Difference |
-| :--- | :---: | :---: | :---: |
-| **Constraint Satisfaction Rate** | 30.0% | **100.0%** | **+70.0% pts** |
-| **Query Success Rate** | 8.3% | **100.0%** | **+91.7% pts** |
-| **Precision @ 3** | 29.4% | **100.0%** | **+70.6% pts** |
-| **Precision @ 5** | 30.0% | **100.0%** | **+70.0% pts** |
-| **Average Latency** | **378.7 ms** | 2,033.0 ms | +1.65s (LLM parsing) |
+| Metric                           | Baseline Vector Search | SmartFind (Self-Query) |      Difference      |
+| :------------------------------- | :--------------------: | :--------------------: | :------------------: |
+| **Constraint Satisfaction Rate** |         30.0%          |       **100.0%**       |    **+70.0% pts**    |
+| **Query Success Rate**           |          8.3%          |       **100.0%**       |    **+91.7% pts**    |
+| **Precision @ 3**                |         29.4%          |       **100.0%**       |    **+70.6% pts**    |
+| **Precision @ 5**                |         30.0%          |       **100.0%**       |    **+70.0% pts**    |
+| **Average Latency**              |      **378.7 ms**      |       2,033.0 ms       | +1.65s (LLM parsing) |
 
 <div align="center">
   <img src="evaluation/benchmark_comparison.png" alt="SmartFind Evaluation Benchmark Chart" width="750px" />
 </div>
 
 ### What These Numbers Mean:
+
 - **Constraint Satisfaction (30.0% → 100.0%)**: In baseline vector search, 70% of returned items broke the user's price or rating rules. SmartFind ensures 100% of returned products respect every constraint.
 - **Query Success Rate (8.3% → 100.0%)**: Only 8.3% of queries in baseline search returned a completely clean page of results. SmartFind returned 100% compliant pages across all 60 test queries.
 
@@ -146,30 +148,54 @@ To verify whether constraint-aware retrieval actually performs better than stand
 SmartFind/
 ├── backend/
 │   ├── src/
-│   │   ├── app.py              # FastAPI application, search endpoints, and Parquet lookup
-│   │   ├── retriever.py        # SelfQueryRetriever initialization with Groq
-│   │   ├── schema.py           # Product metadata schema and field descriptions
-│   │   └── vectorstore.py      # Pinecone connection and FastEmbed ONNX wrapper
+│   │   ├── schemas/
+│   │   │   ├── __init__.py
+│   │   │   └── schemas.py              # Pydantic models (SearchRequest, DocumentResult, SearchResponse)
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── reranker.py             # Product-Anchor Re-ranking engine (hardware boost & accessory penalty)
+│   │   │   ├── filters.py              # AST constraint formatter, category mapping & filter sanitizer
+│   │   │   ├── explainer.py            # Structured explainability reasoning generation
+│   │   │   └── metadata.py             # 0-RAM PyArrow Parquet disk scanner & metadata enrichment
+│   │   ├── app.py                      # Streamlined FastAPI application entrypoint & cache
+│   │   ├── retriever.py                # SelfQueryRetriever initialization with Groq (openai/gpt-oss-120b)
+│   │   ├── schema.py                   # LangChain AttributeInfo metadata schema definitions
+│   │   └── vectorstore.py              # Pinecone connection and FastEmbed ONNX embedding wrapper
 │   ├── data/
-│   │   └── metadata.parquet    # Compressed metadata for 258,911 products
+│   │   └── metadata.parquet            # Compressed metadata for 258,911 products (0-RAM disk scanner)
 │   ├── scripts/
-│   │   ├── run_batch_indexing.py # Pinecone vector indexing script
-│   │   └── preprocess_data.py  # Data cleaning and parquet compression
-│   └── requirements.txt        # Backend dependencies (FastAPI, Pinecone, LangChain, Groq)
+│   │   └── run_batch_indexing.py       # Pinecone vector indexing script
+│   ├── requirements.txt                # Backend dependencies (FastAPI, Pinecone, LangChain, Groq)
+│   └── .env.example                    # Template for required environment variables
 ├── frontend/
 │   ├── src/
-│   │   ├── components/         # SearchBar, ProductCard, Pagination, Header
-│   │   ├── ProductSearch.jsx   # Main search view and state management
-│   │   └── index.css           # Responsive design system
-│   ├── index.html              # HTML entry point with mobile viewport settings
-│   └── package.json            # Frontend dependencies (React 18, Vite)
+│   │   ├── components/
+│   │   │   ├── QueryUnderstandingPanel.jsx # Extracted semantic intent, constraints & 4-step pipeline
+│   │   │   ├── ResultsHeader.jsx       # Results count, active query context & client search latency
+│   │   │   ├── ProductCard.jsx         # Card with constraint match indicator and rating badges
+│   │   │   ├── Explanation.jsx         # Structured match reasoning breakdown tags
+│   │   │   ├── SearchBar.jsx           # Input bar with categorized example query chips
+│   │   │   ├── Pagination.jsx          # Responsive pagination controls (48 items/page)
+│   │   │   ├── Header.jsx              # Clean application title and subtitle
+│   │   │   ├── Footer.jsx              # Ultra-minimal unobtrusive footer
+│   │   │   ├── Icons.jsx               # Professional SVG vector icons (Lucide / Heroicons style)
+│   │   │   ├── LoadingState.jsx        # Skeleton loading placeholders
+│   │   │   ├── EmptyState.jsx          # Zero results state with clickable suggestions
+│   │   │   └── ErrorState.jsx          # Error handling banner with retry action
+│   │   ├── ProductSearch.jsx           # Main search controller, AST insight handling & state
+│   │   └── index.css                   # Responsive layout, grid styles & mobile typography
+│   ├── index.html                      # HTML entry point with mobile viewport settings
+│   └── package.json                    # Frontend dependencies (React 18, Vite)
 ├── evaluation/
-│   ├── queries.json            # 60 test queries with expected constraints
-│   ├── metrics.py              # Metrics logic (Constraint Satisfaction, Precision@K)
-│   ├── evaluate.py             # Benchmark runner script
-│   ├── generate_chart.py       # Matplotlib comparison chart generator
-│   └── results.json            # Raw benchmark data output
-└── README.md                   # Project documentation
+│   ├── queries.json                    # 60 test queries with expected constraints
+│   ├── metrics.py                      # Evaluation metrics (Constraint Satisfaction, Precision@K)
+│   ├── evaluate.py                     # Automated benchmark runner comparing hybrid vs standard search
+│   ├── generate_chart.py               # Benchmark comparison visualization generator
+│   ├── benchmark_comparison.png        # Generated evaluation metrics chart
+│   ├── results.json                    # Raw benchmark data output
+│   └── report.md                       # Full technical benchmark report
+├── render.yaml                         # Render cloud deployment blueprint
+└── README.md                           # Project documentation
 ```
 
 ---
@@ -177,18 +203,21 @@ SmartFind/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Python 3.10+
 - Node.js 18+
 - A free [Pinecone](https://www.pinecone.io/) account and API key
 - A free [Groq Cloud](https://console.groq.com/) API key
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/your-username/SmartFind.git
 cd SmartFind
 ```
 
 ### 2. Backend Setup
+
 ```bash
 cd backend
 python -m venv venv
@@ -201,6 +230,7 @@ pip install -r requirements.txt
 ```
 
 Create a `.env` file in the `backend/` folder:
+
 ```env
 GROQ_API_KEY=your_groq_api_key
 PINECONE_API_KEY=your_pinecone_api_key
@@ -208,22 +238,29 @@ PINECONE_INDEX_NAME=ecommerce-products
 ```
 
 Run the backend server:
+
 ```bash
 uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
 ```
+
 API docs will be live at `http://localhost:8000/docs`.
 
 ### 3. Frontend Setup
+
 Open a new terminal:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
 Open `http://localhost:5173` in your browser.
 
 ### 4. Running the Evaluation Benchmark
+
 To run the 60-query benchmark locally:
+
 ```bash
 python evaluation/evaluate.py
 ```
@@ -244,7 +281,7 @@ Try searching for queries like:
 
 ## 🎯 Why This Project?
 
-Most AI search tutorials stop at basic vector similarity. In real-world e-commerce, pure semantic search is not enough because users have hard constraints like budgets and minimum review scores. 
+Most AI search tutorials stop at basic vector similarity. In real-world e-commerce, pure semantic search is not enough because users have hard constraints like budgets and minimum review scores.
 
 SmartFind demonstrates how to combine **natural-language understanding** with **structured database filtering** to create search results that are both semantically relevant and mathematically accurate.
 
@@ -261,6 +298,6 @@ SmartFind demonstrates how to combine **natural-language understanding** with **
 
 - [ ] **Semantic Caching**: Cache common query decompositions in Redis to reduce search latency to under 50ms.
 - [ ] **Hybrid Search**: Combine lexical BM25 keyword matching with dense vectors for brand code searches (e.g., exact model numbers).
-- [ ] **Conversational Refinement**: Allow users to refine results across multiple chat turns (e.g., *"show me cheaper ones"*).
+- [ ] **Conversational Refinement**: Allow users to refine results across multiple chat turns (e.g., _"show me cheaper ones"_).
 
 ---

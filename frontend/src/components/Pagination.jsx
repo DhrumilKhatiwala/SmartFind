@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconChevronLeft, IconChevronRight } from './Icons';
 
 /**
  * Pagination component for navigating product results.
@@ -70,7 +71,8 @@ const Pagination = ({ currentPage, totalPages, totalItems, pageSize, onPageChang
           }}
           aria-label="Go to previous page"
         >
-          ← Prev
+          <IconChevronLeft size={14} color="#0f172a" style={{ marginRight: '2px' }} />
+          <span>Prev</span>
         </button>
 
         {/* Page Numbers */}
@@ -115,7 +117,8 @@ const Pagination = ({ currentPage, totalPages, totalItems, pageSize, onPageChang
           }}
           aria-label="Go to next page"
         >
-          Next →
+          <span>Next</span>
+          <IconChevronRight size={14} color="#0f172a" style={{ marginLeft: '2px' }} />
         </button>
       </div>
     </nav>
@@ -151,6 +154,8 @@ const styles = {
     maxWidth: '100%',
   },
   navButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
     padding: '7px 12px',
     backgroundColor: '#ffffff',
     border: '1.5px solid #cbd5e1',

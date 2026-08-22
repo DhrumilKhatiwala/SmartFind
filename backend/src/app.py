@@ -1,146 +1,44 @@
-import pyarrow.dataset as ds
-import pyarrow.parquet as pq
-import os
+import sys
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional
-import pandas as pd
-from dotenv import load_dotenv
+from typing import Dict, Any, List
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
-from src.explainer import generate_structured_explanation
+from src.schemas import SearchRequest, DocumentResult, SearchResponse
+from src.services import (
+    init_metadata_dataset,
+    enrich_with_parquet_metadata,
+    product_lookup,
+    sanitize_pinecone_filter,
+    format_ast_constraints,
+    rerank_products,
+    generate_structured_explanation,
+)
 from src.retriever import initialize_self_query_retriever
 
-# Load environment configuration (.env)
-load_dotenv()
-
-
-# Pydantic Schemas for Request & Response validation
-class SearchRequest(BaseModel):
-    query: str = Field(
-        ...,
-        min_length=1,
-        description="Natural language query string (e.g. 'phones under 20000 with rating above 4')",
-        examples=["headphones under 2000"],
-    )
-    top_k: int = Field(
-        500,
-        ge=1,
-        le=1000,
-        description="Maximum number of top results to return (defaults to 500)",
-    )
-
-
-
-
-class ProductMetadata(BaseModel):
-    price: Optional[float] = Field(None, description="Product price in INR")
-    rating: Optional[float] = Field(None, description="Customer review rating (0.0 to 5.0)")
-    category: Optional[str] = Field(None, description="Product category/department")
-    image: Optional[str] = Field(None, description="Product image URL")
-    no_of_ratings: Optional[str] = Field(None, description="Number of customer reviews/ratings")
-    actual_price: Optional[str] = Field(None, description="Original/MRP price in INR")
-    discount_price: Optional[str] = Field(None, description="Discounted price string")
-
-
-
-class DocumentResult(BaseModel):
-    page_content: str = Field(..., description="Combined product name and sub-category")
-    metadata: ProductMetadata = Field(..., description="Structured product metadata")
-    explanation: Optional[str] = Field(
-        None,
-        description="Concise human-readable explanation of semantic match and satisfied metadata filters",
-    )
-
-
-class SearchResponse(BaseModel):
-    query: str
-    count: int
-    results: List[DocumentResult]
-
-
-
-# In-memory application state & query cache
-retriever_instance = None
-product_lookup: Dict[str, dict] = {}
+# Global singletons
+retriever_instance: Any = None
 SEARCH_CACHE: Dict[str, SearchResponse] = {}
-
-
-metadata_dataset: Optional[ds.Dataset] = None
-
-
-def init_metadata_dataset() -> Optional[ds.Dataset]:
-    """
-    Initializes a zero-RAM on-disk Parquet dataset handle for instantaneous lookups.
-    Zero startup time, zero SQLite building, zero RAM overhead.
-    """
-    workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    candidates = [
-        os.path.join(workspace_dir, "data", "metadata.parquet"),
-        os.path.join(workspace_dir, "backend", "data", "metadata.parquet"),
-        os.path.join("data", "metadata.parquet"),
-        os.path.join("backend", "data", "metadata.parquet"),
-    ]
-    target_path = next((p for p in candidates if os.path.exists(p)), None)
-    if target_path:
-        print(f"Loaded 0-RAM metadata dataset from: {target_path}")
-        return ds.dataset(target_path, format="parquet")
-    print("Notice: metadata.parquet not found. Search will run with core vector metadata.")
-    return None
-
-
-def sanitize_pinecone_filter(filter_obj):
-    """
-    Recursively sanitizes Pinecone metadata filter dictionaries to ensure:
-    - Numeric fields ('price', 'rating') are strictly converted to float/int, not strings.
-    - Resolves Pinecone 400 error: 'the $gt operator must be followed by a number, got string instead'.
-    """
-    if not isinstance(filter_obj, dict):
-        return filter_obj
-
-    sanitized = {}
-    for key, value in filter_obj.items():
-        if key in ("price", "rating"):
-            if isinstance(value, dict):
-                inner = {}
-                for op, op_val in value.items():
-                    try:
-                        clean_str = str(op_val).replace(",", "").strip()
-                        inner[op] = float(clean_str)
-                    except (ValueError, TypeError):
-                        inner[op] = op_val
-                sanitized[key] = inner
-            else:
-                try:
-                    sanitized[key] = float(str(value).replace(",", "").strip())
-                except (ValueError, TypeError):
-                    sanitized[key] = value
-        elif key in ("$and", "$or") and isinstance(value, list):
-            sanitized[key] = [sanitize_pinecone_filter(item) for item in value if item]
-        else:
-            sanitized[key] = (
-                sanitize_pinecone_filter(value) if isinstance(value, dict) else value
-            )
-    return sanitized
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-    global retriever_instance, metadata_dataset
+    """
+    Application lifespan manager for warm-up and graceful shutdown.
+    Pre-initializes the SelfQueryRetriever and memory-mapped Parquet scanner.
+    """
+    global retriever_instance
     print("Pre-initializing SelfQueryRetriever and connecting to Pinecone Cloud...")
     try:
         retriever_instance = initialize_self_query_retriever(search_k=500)
-
-
         print("SelfQueryRetriever pre-initialized successfully.")
     except Exception as err:
         print(f"Error during retriever initialization: {err}")
         raise err
 
-    # Load rich product metadata into memory
-    metadata_dataset = init_metadata_dataset()
+    init_metadata_dataset()
     yield
     print("Shutting down FastAPI application...")
 
@@ -148,7 +46,7 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI application
 app = FastAPI(
     title="SmartFind Vector Search API",
-    description="Natural-language product search with dynamic metadata filtering using Gemini 2.5 Flash and Pinecone Cloud Vector Store.",
+    description="Natural-language product search with dynamic metadata filtering using Groq and Pinecone Cloud Vector Store.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -161,7 +59,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 
 @app.get("/", tags=["Root"])
@@ -201,21 +98,27 @@ async def health_check():
     summary="Execute Natural Language Vector Search with Metadata Filtering",
 )
 async def search_products(payload: SearchRequest):
+    """
+    End-to-end constraint-aware search:
+    1. Fast in-memory cache check (0.001ms)
+    2. Groq AST Query Decomposition (intent + numeric rules)
+    3. Pinecone Filtered Vector Search
+    4. Product-Anchor Re-ranking Pass (demotes accessories, boosts genuine hardware)
+    5. Parquet metadata enrichment & structured explainability reasoning
+    """
     if retriever_instance is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="SelfQueryRetriever service is not initialized.",
         )
 
-    # 1. Fast Cache Lookup (0.001 ms for repeated queries)
+    # 1. Fast Cache Lookup
     cache_key = f"{payload.query.strip().lower()}__top{payload.top_k}"
     if cache_key in SEARCH_CACHE:
         return SEARCH_CACHE[cache_key]
 
     try:
-        from starlette.concurrency import run_in_threadpool
-
-        # 1. Non-blocking Single-Pass LLM Execution
+        # 2. Single-Pass LLM Query Decomposition via Groq AST
         structured_query = None
         if hasattr(retriever_instance, "query_constructor"):
             try:
@@ -227,11 +130,11 @@ async def search_products(payload: SearchRequest):
                 if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "quota" in err_str.lower():
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail="Gemini API Quota Exceeded (429). Please update your GEMINI_API_KEY in backend/.env.",
+                        detail="Groq API rate limit reached. Please retry in a few moments.",
                     )
                 raise qc_err
 
-        # 2. Fast AST Translation to Pinecone Filter (0ms, eliminates duplicate LLM invocation)
+        # 3. Fast AST Translation to Pinecone Boolean Filter
         semantic_query = payload.query
         pinecone_filter = None
         if structured_query:
@@ -240,124 +143,72 @@ async def search_products(payload: SearchRequest):
                     structured_query
                 )
             )
-            raw_filter = search_kwargs.get("filter") if search_kwargs else None
-            pinecone_filter = sanitize_pinecone_filter(raw_filter) if raw_filter else None
+            pinecone_filter = search_kwargs.get("filter")
 
-        # 3. Non-blocking Direct Pinecone Vector Search with Sanitized Filter
-        if pinecone_filter:
-            try:
-                raw_docs = await run_in_threadpool(
-                    retriever_instance.vectorstore.similarity_search,
-                    semantic_query or payload.query,
-                    k=payload.top_k,
-                    filter=pinecone_filter,
-                )
-            except Exception as pinecone_err:
-                print(f"Pinecone filter fallback ({pinecone_err}). Running similarity search without filter...")
-                raw_docs = await run_in_threadpool(
-                    retriever_instance.vectorstore.similarity_search,
-                    semantic_query or payload.query,
-                    k=payload.top_k,
-                )
-        else:
-            raw_docs = await run_in_threadpool(
-                retriever_instance.vectorstore.similarity_search,
-                semantic_query or payload.query,
-                k=payload.top_k,
-            )
+        # 4. Pinecone Filter Sanitization & Category Synonym Normalization
+        sanitized_filter = (
+            sanitize_pinecone_filter(pinecone_filter) if pinecone_filter else None
+        )
 
+        # 5. Non-blocking Vector Search in Threadpool
+        search_filter_kwargs = (
+            {"filter": sanitized_filter} if sanitized_filter else {}
+        )
+        raw_docs = await run_in_threadpool(
+            retriever_instance.vectorstore.similarity_search,
+            query=semantic_query or payload.query,
+            k=payload.top_k,
+            **search_filter_kwargs,
+        )
 
+        # 6. Product-Anchor Re-ranking Layer (Boosts genuine devices, demotes companion accessories)
+        extracted_intent = (
+            semantic_query.strip()
+            if semantic_query and semantic_query.strip()
+            else (structured_query.query.strip() if structured_query and structured_query.query else payload.query)
+        )
+        ranked_docs = rerank_products(extracted_intent, raw_docs)
 
+        # 7. Fast Vectorized Metadata Enrichment from Parquet (0MB RAM)
+        enrich_with_parquet_metadata(ranked_docs)
 
-
-
-
-        # 4. Instant 0-RAM metadata enrichment from Parquet dataset
-        metadata_map = {}
-        if metadata_dataset and raw_docs:
-            names_to_query = []
-            for doc in raw_docs:
-                c = doc.page_content.strip()
-                n = c.split(" - ")[0].strip() if " - " in c else c
-                if n:
-                    names_to_query.append(n)
-                if c:
-                    names_to_query.append(c)
-
-            unique_query_names = list(set(names_to_query))
-            if unique_query_names:
-                try:
-                    filter_expr = ds.field("name").isin(unique_query_names)
-                    table = metadata_dataset.to_table(
-                        filter=filter_expr,
-                        columns=["name", "image", "no_of_ratings", "actual_price", "discount_price"],
-                    )
-                    for row in table.to_pylist():
-                        info = {
-                            "image": row["image"],
-                            "no_of_ratings": row["no_of_ratings"],
-                            "actual_price": row["actual_price"],
-                            "discount_price": row["discount_price"],
-                        }
-                        if row["name"]:
-                            metadata_map[row["name"]] = info
-                except Exception as db_err:
-                    print(f"Metadata lookup warning: {db_err}")
-
-        # 5. Format retrieved documents into response with enriched metadata & explanation
+        # 8. Deterministic Explainability Generation
         formatted_results: List[DocumentResult] = []
-        for doc in raw_docs:
-            meta = doc.metadata or {}
-            content = doc.page_content.strip()
-
-            name_part = content.split(" - ")[0].strip() if " - " in content else content
-            extra_info = metadata_map.get(content) or metadata_map.get(name_part) or {}
-
-            # Generate concise, human-readable explanation using actual parsed filters
+        for doc in ranked_docs:
             explanation = generate_structured_explanation(
+                page_content=doc.page_content,
+                metadata=doc.metadata,
+                query_str=payload.query,
                 structured_query=structured_query,
-                raw_query=payload.query,
-                document_content=content,
-                metadata=meta,
             )
-
             formatted_results.append(
                 DocumentResult(
-                    page_content=content,
-                    metadata=ProductMetadata(
-                        price=meta.get("price"),
-                        rating=meta.get("rating"),
-                        category=meta.get("category"),
-                        image=extra_info.get("image"),
-                        no_of_ratings=extra_info.get("no_of_ratings"),
-                        actual_price=extra_info.get("actual_price"),
-                        discount_price=extra_info.get("discount_price"),
-                    ),
+                    page_content=doc.page_content,
+                    metadata=doc.metadata,
                     explanation=explanation,
                 )
             )
 
+        # 9. Format structured AST constraints for client showcase
+        detected_constraints = format_ast_constraints(structured_query)
 
         response = SearchResponse(
             query=payload.query,
             count=len(formatted_results),
+            semantic_intent=extracted_intent,
+            detected_constraints=detected_constraints,
             results=formatted_results,
         )
 
-        # Cache response for instant repeat queries
+        # Cache valid search response
         SEARCH_CACHE[cache_key] = response
         return response
+
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Error performing search: {e}", file=sys.stderr)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while performing search: {str(e)}",
         )
-
-
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("src.app:app", host="0.0.0.0", port=8000, reload=True)
-

@@ -1,5 +1,13 @@
 import React from 'react';
 
+const defaultSamples = [
+  { text: 'headphones under ₹1,500 with rating above 4', label: 'Price + Rating' },
+  { text: 'running shoes with rating above 4.2', label: 'Rating Floor' },
+  { text: 'laptops under ₹45,000 in electronics', label: 'Category + Budget' },
+  { text: 'wireless earbuds under ₹2,000', label: 'Price Constraint' },
+  { text: 'air fryer under ₹5,000 with rating above 4', label: 'Multi-Constraint' },
+];
+
 const SearchBar = ({
   query,
   setQuery,
@@ -7,7 +15,7 @@ const SearchBar = ({
   onClear,
   loading,
   hasResultsOrSearched,
-  sampleQueries = [],
+  sampleQueries = defaultSamples,
 }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -80,25 +88,34 @@ const SearchBar = ({
         </button>
       </form>
 
-      {/* Suggested Query Chips */}
+      {/* Suggested Query Chips with Badges */}
       {sampleQueries.length > 0 && (
         <div style={styles.suggestionsContainer}>
-          <span style={styles.suggestionLabel}>Suggested:</span>
+          <span style={styles.suggestionLabel}>Try Examples:</span>
           <div style={styles.chipList}>
-            {sampleQueries.map((sample, idx) => (
-              <button
-                key={idx}
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  setQuery(sample);
-                  onSearch(sample);
-                }}
-                style={styles.chip}
-              >
-                {sample}
-              </button>
-            ))}
+            {sampleQueries.map((item, idx) => {
+              const queryText = typeof item === 'string' ? item : item.text;
+              const badgeLabel = typeof item === 'object' ? item.label : null;
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setQuery(queryText);
+                    onSearch(queryText);
+                  }}
+                  style={styles.chip}
+                  title={`Search: "${queryText}"`}
+                >
+                  <span style={styles.chipText}>{queryText}</span>
+                  {badgeLabel && (
+                    <span style={styles.chipBadge}>{badgeLabel}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -109,7 +126,7 @@ const SearchBar = ({
 const styles = {
   container: {
     width: '100%',
-    maxWidth: '860px',
+    maxWidth: '880px',
     margin: '0 auto 24px auto',
     minWidth: 0,
   },
@@ -204,9 +221,11 @@ const styles = {
   suggestionLabel: {
     fontSize: '0.78rem',
     color: '#64748b',
-    fontWeight: '600',
+    fontWeight: '700',
     paddingTop: '4px',
     flexShrink: 0,
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
   },
   chipList: {
     display: 'flex',
@@ -216,12 +235,15 @@ const styles = {
     minWidth: 0,
   },
   chip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     padding: '4px 10px',
     borderRadius: '16px',
     fontSize: '0.76rem',
-    color: '#475569',
+    color: '#334155',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
@@ -231,6 +253,19 @@ const styles = {
     overflowWrap: 'break-word',
     wordBreak: 'break-word',
     textAlign: 'left',
+  },
+  chipText: {
+    overflowWrap: 'break-word',
+  },
+  chipBadge: {
+    fontSize: '0.68rem',
+    fontWeight: '600',
+    backgroundColor: '#eff6ff',
+    color: '#2563eb',
+    padding: '1px 6px',
+    borderRadius: '10px',
+    border: '1px solid #bfdbfe',
+    whiteSpace: 'nowrap',
   },
 };
 
