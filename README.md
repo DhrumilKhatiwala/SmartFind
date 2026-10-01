@@ -186,10 +186,7 @@ gantt
 - **Flamegraph Latency Profiling**: Real-time identification of latency bottlenecks to maintain sub-second response times.
 - **Graceful Zero-Overhead Fallback**: Tracing runs seamlessly in the background and gracefully deactivates if credentials are not configured.
 
-<div align="center">
-  <img src="docs/langfuse-trace.png" alt="Langfuse LLM Observability Dashboard & Execution Trace" width="100%" style="border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);" />
-  <p><em>Example Langfuse execution trace showing latency breakdown, token count, and nested spans for a SmartFind query.</em></p>
-</div>
+
 
 ---
 
