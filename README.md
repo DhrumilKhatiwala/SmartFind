@@ -7,6 +7,7 @@
 [![LangChain](https://img.shields.io/badge/LangChain-Self--Query-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://www.langchain.com/)
 [![Groq](https://img.shields.io/badge/Groq-Fast_Inference-F55036?style=for-the-badge&logo=groq&logoColor=white)](https://groq.com/)
 [![Pinecone](https://img.shields.io/badge/Pinecone-Vector_DB-000000?style=for-the-badge&logo=pinecone&logoColor=white)](https://www.pinecone.io/)
+[![Langfuse](https://img.shields.io/badge/Langfuse-LLM_Observability-000000?style=for-the-badge&logo=langfuse&logoColor=white)](https://langfuse.com/)
 
 _Natural-language e-commerce search with automatic budget, rating, and category filtering._
 
@@ -29,6 +30,7 @@ _Natural-language e-commerce search with automatic budget, rating, and category 
 - [🛠️ Tech Stack](#️-tech-stack)
 - [📊 Dataset](#-dataset)
 - [📈 Evaluation](#-evaluation)
+- [🔍 LLM Observability & Tracing](#-llm-observability--tracing)
 - [📂 Project Structure](#-project-structure)
 - [🚀 Getting Started](#-getting-started)
 - [🔍 Example Queries](#-example-queries)
@@ -92,6 +94,7 @@ flowchart LR
 - **Explainable Results**: Each product card explains how it satisfied the search query and filters.
 - **Responsive Web Interface**: Clean, mobile-friendly React frontend with suggestion chips and pagination (48 items per page).
 - **Production API**: Lightweight FastAPI backend with interactive Swagger documentation (`/docs`) and health checks.
+- **Production LLM Observability & Tracing**: Distributed execution tracing via Langfuse v4 capturing end-to-end latencies, token consumption, and cost tracking across every query.
 
 ---
 
@@ -106,6 +109,7 @@ flowchart LR
 | **Pinecone Cloud**    | Serverless vector database for vector similarity search                            |
 | **FastEmbed (ONNX)**  | Lightweight CPU embedding engine (`all-MiniLM-L6-v2`, 384 dimensions)              |
 | **PyArrow & Parquet** | Fast on-disk product metadata lookups with minimal memory usage                    |
+| **Langfuse (v4)**     | Distributed LLM observability, execution tracing, latency profiling & cost tracking |
 
 ---
 
@@ -144,6 +148,51 @@ To verify whether constraint-aware retrieval actually performs better than stand
 
 ---
 
+## 🔍 LLM Observability & Tracing
+
+In multi-stage retrieval pipelines, performance bottlenecks and unexpected results are difficult to diagnose without granular execution metrics. When a search request executes, engineers need real-time answers: *Was the latency spent in LLM query understanding, vector search, or reranking? How many tokens were consumed? Did the metadata filters parse properly?*
+
+SmartFind natively integrates **Langfuse v4 (OpenTelemetry-based)** for distributed tracing across the entire search lifecycle.
+
+### Execution Breakdown & Trace Hierarchy
+
+Every search request emits an end-to-end trace with nested execution spans:
+
+```mermaid
+gantt
+    title SmartFind Search Pipeline Latency Breakdown
+    dateFormat X
+    axisFormat %s ms
+    section Spans
+    1. Groq AST Query Understanding (LLM) :active, 0, 180
+    2. Filter Sanitization & Category Synonyms :crit, 180, 181
+    3. Pinecone Filtered Vector Search :active, 181, 260
+    4. Product-Anchor Re-ranking       :260, 275
+    5. Explainability Synthesis        :275, 278
+```
+
+| Pipeline Step | Span Name | Typical Latency | Captured Metrics & Spans |
+| :--- | :--- | :---: | :--- |
+| **1. Query Decomposition** | `groq-ast-query-understanding` | ~180 ms | Prompt tokens, completion tokens, latency, cost & generated AST |
+| **2. Filter Sanitization** | `filter-sanitization` | < 1 ms | Boolean filter structure, synonym mapping & operator validation |
+| **3. Vector Retrieval** | `pinecone-vector-search` | ~80 ms | Pinecone Cloud query latency, top-k candidate vectors retrieved |
+| **4. Anchor Re-ranking** | `product-reranking` | ~15 ms | Candidate pool count, device-anchor boosting & accessory demotions |
+| **5. Explainability** | `explainability-generation` | ~2 ms | Deterministic rule verification & natural-language reason tags |
+
+### Key Observability Features
+
+- **Token & Cost Tracking**: Live accounting of prompt tokens, completion tokens, and dollar cost per query via Groq (`openai/gpt-oss-120b`).
+- **Granular Execution Spans**: Visualizes input parameters, sanitization transforms, and output counts at every individual stage.
+- **Flamegraph Latency Profiling**: Real-time identification of latency bottlenecks to maintain sub-second response times.
+- **Graceful Zero-Overhead Fallback**: Tracing runs seamlessly in the background and gracefully deactivates if credentials are not configured.
+
+<div align="center">
+  <img src="docs/langfuse-trace.png" alt="Langfuse LLM Observability Dashboard & Execution Trace" width="100%" style="border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);" />
+  <p><em>Example Langfuse execution trace showing latency breakdown, token count, and nested spans for a SmartFind query.</em></p>
+</div>
+
+---
+
 ## 📂 Project Structure
 
 ```text
@@ -155,6 +204,7 @@ SmartFind/
 │   │   │   └── schemas.py              # Pydantic models (SearchRequest, DocumentResult, SearchResponse)
 │   │   ├── services/
 │   │   │   ├── __init__.py
+│   │   │   ├── tracing.py              # Langfuse v4 client, @observe_search decorator & span helpers
 │   │   │   ├── reranker.py             # Product-Anchor Re-ranking engine (hardware boost & accessory penalty)
 │   │   │   ├── filters.py              # AST constraint formatter, category mapping & filter sanitizer
 │   │   │   ├── explainer.py            # Structured explainability reasoning generation
@@ -237,6 +287,11 @@ Create a `.env` file in the `backend/` folder:
 GROQ_API_KEY=your_groq_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_INDEX_NAME=ecommerce-products
+
+# Optional: LLM Observability & Tracing (https://cloud.langfuse.com)
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
 ```
 
 Run the backend server:

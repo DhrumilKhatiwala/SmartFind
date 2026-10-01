@@ -15,3 +15,9 @@ services:
         sync: false
       - key: PINECONE_INDEX_NAME
         value: ecommerce-products
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_BASE_URL
+        value: https://cloud.langfuse.com
