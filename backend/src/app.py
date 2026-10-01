@@ -17,6 +17,9 @@ from src.services import (
     generate_structured_explanation,
 )
 from src.retriever import initialize_self_query_retriever
+from src.services.tracing import (
+    create_trace, create_langchain_handler, trace_span, flush_tracing
+)
 
 # Global singletons
 retriever_instance: Any = None
@@ -40,6 +43,7 @@ async def lifespan(app: FastAPI):
 
     init_metadata_dataset()
     yield
+    flush_tracing()
     print("Shutting down FastAPI application...")
 
 
@@ -106,6 +110,10 @@ async def search_products(payload: SearchRequest):
     4. Product-Anchor Re-ranking Pass (demotes accessories, boosts genuine hardware)
     5. Parquet metadata enrichment & structured explainability reasoning
     """
+    # Create a Langfuse trace for this search request
+    trace = create_trace(query=payload.query, metadata={"top_k": payload.top_k})
+    langchain_handler = create_langchain_handler(trace)
+
     if retriever_instance is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -122,8 +130,11 @@ async def search_products(payload: SearchRequest):
         structured_query = None
         if hasattr(retriever_instance, "query_constructor"):
             try:
+                invoke_config = {"callbacks": [langchain_handler]} if langchain_handler else {}
                 structured_query = await run_in_threadpool(
-                    retriever_instance.query_constructor.invoke, {"query": payload.query}
+                    retriever_instance.query_constructor.invoke,
+                    {"query": payload.query},
+                    invoke_config,
                 )
             except Exception as qc_err:
                 err_str = str(qc_err)
@@ -146,20 +157,24 @@ async def search_products(payload: SearchRequest):
             pinecone_filter = search_kwargs.get("filter")
 
         # 4. Pinecone Filter Sanitization & Category Synonym Normalization
-        sanitized_filter = (
-            sanitize_pinecone_filter(pinecone_filter) if pinecone_filter else None
-        )
+        with trace_span(trace, "filter-sanitization", {"raw_filter": str(pinecone_filter)}):
+            sanitized_filter = (
+                sanitize_pinecone_filter(pinecone_filter) if pinecone_filter else None
+            )
 
         # 5. Non-blocking Vector Search in Threadpool
         search_filter_kwargs = (
             {"filter": sanitized_filter} if sanitized_filter else {}
         )
-        raw_docs = await run_in_threadpool(
-            retriever_instance.vectorstore.similarity_search,
-            query=semantic_query or payload.query,
-            k=payload.top_k,
-            **search_filter_kwargs,
-        )
+        with trace_span(trace, "pinecone-vector-search", {"query": semantic_query, "k": payload.top_k}) as vs_span:
+            raw_docs = await run_in_threadpool(
+                retriever_instance.vectorstore.similarity_search,
+                query=semantic_query or payload.query,
+                k=payload.top_k,
+                **search_filter_kwargs,
+            )
+            if vs_span:
+                vs_span.end(output={"result_count": len(raw_docs)})
 
         # 6. Product-Anchor Re-ranking Layer (Boosts genuine devices, demotes companion accessories)
         extracted_intent = (
@@ -167,27 +182,31 @@ async def search_products(payload: SearchRequest):
             if semantic_query and semantic_query.strip()
             else (structured_query.query.strip() if structured_query and structured_query.query else payload.query)
         )
-        ranked_docs = rerank_products(extracted_intent, raw_docs)
+        with trace_span(trace, "product-reranking", {"intent": extracted_intent, "candidates": len(raw_docs)}) as rr_span:
+            ranked_docs = rerank_products(extracted_intent, raw_docs)
+            if rr_span:
+                rr_span.end(output={"ranked_count": len(ranked_docs)})
 
         # 7. Fast Vectorized Metadata Enrichment from Parquet (0MB RAM)
         enrich_with_parquet_metadata(ranked_docs)
 
         # 8. Deterministic Explainability Generation
-        formatted_results: List[DocumentResult] = []
-        for doc in ranked_docs:
-            explanation = generate_structured_explanation(
-                page_content=doc.page_content,
-                metadata=doc.metadata,
-                query_str=payload.query,
-                structured_query=structured_query,
-            )
-            formatted_results.append(
-                DocumentResult(
+        with trace_span(trace, "explainability-generation", {"doc_count": len(ranked_docs)}):
+            formatted_results: List[DocumentResult] = []
+            for doc in ranked_docs:
+                explanation = generate_structured_explanation(
                     page_content=doc.page_content,
                     metadata=doc.metadata,
-                    explanation=explanation,
+                    query_str=payload.query,
+                    structured_query=structured_query,
                 )
-            )
+                formatted_results.append(
+                    DocumentResult(
+                        page_content=doc.page_content,
+                        metadata=doc.metadata,
+                        explanation=explanation,
+                    )
+                )
 
         # 9. Format structured AST constraints for client showcase
         detected_constraints = format_ast_constraints(structured_query)
@@ -199,6 +218,10 @@ async def search_products(payload: SearchRequest):
             detected_constraints=detected_constraints,
             results=formatted_results,
         )
+
+        # Finalize Langfuse trace with output summary
+        if trace:
+            trace.update(output={"count": len(formatted_results), "intent": extracted_intent})
 
         # Cache valid search response
         SEARCH_CACHE[cache_key] = response

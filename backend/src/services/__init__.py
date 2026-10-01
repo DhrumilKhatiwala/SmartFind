@@ -2,6 +2,7 @@ from .filters import sanitize_pinecone_filter, format_ast_constraints, map_categ
 from .reranker import rerank_products
 from .explainer import generate_structured_explanation
 from .metadata import init_metadata_dataset, enrich_with_parquet_metadata, product_lookup
+from .tracing import create_trace, create_langchain_handler, trace_span, flush_tracing
 
 __all__ = [
     "sanitize_pinecone_filter",
@@ -12,4 +13,8 @@ __all__ = [
     "init_metadata_dataset",
     "enrich_with_parquet_metadata",
     "product_lookup",
+    "create_trace",
+    "create_langchain_handler",
+    "trace_span",
+    "flush_tracing",
 ]

@@ -5,6 +5,7 @@ langchain-community>=0.3.0
 langchain-pinecone>=0.2.0
 pinecone>=5.0.0
 langchain-groq>=0.2.0
+langfuse>=2.0.0
 python-dotenv
 pandas
 numpy
