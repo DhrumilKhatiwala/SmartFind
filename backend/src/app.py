@@ -1,3 +1,13 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure backend .env is loaded regardless of current working directory
+_backend_dir = Path(__file__).resolve().parent.parent
+load_dotenv(_backend_dir / ".env")
+if not os.getenv("LANGFUSE_HOST") and os.getenv("LANGFUSE_BASE_URL"):
+    os.environ["LANGFUSE_HOST"] = os.environ["LANGFUSE_BASE_URL"]
+
 import sys
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List
@@ -18,7 +28,7 @@ from src.services import (
 )
 from src.retriever import initialize_self_query_retriever
 from src.services.tracing import (
-    create_trace, create_langchain_handler, trace_span, flush_tracing
+    create_trace, create_langchain_handler, trace_span, flush_tracing, observe_search, get_trace_url
 )
 
 # Global singletons
@@ -101,6 +111,7 @@ async def health_check():
     status_code=status.HTTP_200_OK,
     summary="Execute Natural Language Vector Search with Metadata Filtering",
 )
+@observe_search
 async def search_products(payload: SearchRequest):
     """
     End-to-end constraint-aware search:
@@ -225,6 +236,13 @@ async def search_products(payload: SearchRequest):
 
         # Cache valid search response
         SEARCH_CACHE[cache_key] = response
+
+        # Flush trace and log link to dashboard
+        trace_url = get_trace_url()
+        if trace_url:
+            print(f"[Langfuse] Trace recorded: {trace_url}")
+        flush_tracing()
+
         return response
 
     except HTTPException:

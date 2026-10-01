@@ -1,10 +1,11 @@
 """
 Langfuse LLM Observability and Tracing for SmartFind.
 
-Provides:
-- A singleton Langfuse client (lazy-initialized, zero overhead if keys are missing)
-- A LangChain CallbackHandler for automatic Groq LLM tracing
-- Decorator-style span helpers for manual instrumentation of non-LLM steps
+Supports Langfuse v4 (OpenTelemetry-based):
+- Automatic LangChain tracing for Groq LLM queries via CallbackHandler
+- Root request observation via @observe_search decorator
+- Context manager trace_span for granular non-LLM pipeline steps
+- Automatic flush and trace URL generation
 """
 
 import os
@@ -14,111 +15,145 @@ from contextlib import contextmanager
 
 from dotenv import load_dotenv
 
+# Ensure environment is loaded from backend directory
 load_dotenv()
 
-# Lazy singleton — only created if keys are configured
+# Synchronize HOST and BASE_URL if one is defined
+if not os.getenv("LANGFUSE_HOST") and os.getenv("LANGFUSE_BASE_URL"):
+    os.environ["LANGFUSE_HOST"] = os.environ["LANGFUSE_BASE_URL"]
+if not os.getenv("LANGFUSE_BASE_URL") and os.getenv("LANGFUSE_HOST"):
+    os.environ["LANGFUSE_BASE_URL"] = os.environ["LANGFUSE_HOST"]
+
 _langfuse_client = None
-_tracing_enabled: Optional[bool] = None
 
 
-def _is_tracing_enabled() -> bool:
-    """Check if Langfuse credentials are configured."""
-    global _tracing_enabled
-    if _tracing_enabled is None:
-        _tracing_enabled = bool(
-            os.getenv("LANGFUSE_PUBLIC_KEY")
-            and os.getenv("LANGFUSE_SECRET_KEY")
-            and os.getenv("LANGFUSE_PUBLIC_KEY") != "your_langfuse_public_key_here"
-        )
-    return _tracing_enabled
+def is_tracing_enabled() -> bool:
+    """Check if valid Langfuse credentials are configured."""
+    pub = os.getenv("LANGFUSE_PUBLIC_KEY")
+    sec = os.getenv("LANGFUSE_SECRET_KEY")
+    return bool(pub and sec and pub != "your_langfuse_public_key_here")
 
 
 def get_langfuse():
-    """Returns the singleton Langfuse client, or None if not configured."""
+    """Returns the singleton Langfuse v4 client, or None if unconfigured."""
     global _langfuse_client
-    if not _is_tracing_enabled():
+    if not is_tracing_enabled():
         return None
     if _langfuse_client is None:
-        from langfuse import Langfuse
-        _langfuse_client = Langfuse(
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-        )
+        try:
+            from langfuse import get_client
+            _langfuse_client = get_client()
+        except Exception as e:
+            print(f"[Langfuse] Client initialization warning: {e}")
+            return None
     return _langfuse_client
 
 
-def create_langchain_handler(trace):
+def observe_search(func):
     """
-    Creates a LangChain CallbackHandler bound to a specific Langfuse trace.
-    This automatically captures LLM calls (Groq), token usage, and latencies.
+    Decorator for FastAPI endpoint to establish a root Langfuse trace.
+    Falls back gracefully to a transparent no-op if Langfuse is not configured.
     """
-    if trace is None:
-        return None
+    if is_tracing_enabled():
+        try:
+            from langfuse import observe
+            return observe(name="smartfind-search")(func)
+        except Exception:
+            return func
+    return func
+
+
+class SpanWrapper:
+    """Safe wrapper for observation spans to support update and end methods gracefully."""
+    def __init__(self, span=None):
+        self.span = span
+
+    def update(self, **kwargs):
+        if self.span:
+            try:
+                self.span.update(**kwargs)
+            except Exception:
+                pass
+
+    def end(self, **kwargs):
+        if self.span:
+            try:
+                if kwargs:
+                    self.span.update(**kwargs)
+            except Exception:
+                pass
+
+
+@contextmanager
+def trace_span(name_or_trace: Any, name: Optional[str] = None, input_data: Any = None, as_type: str = "span"):
+    """
+    Context manager for instrumenting pipeline steps.
+    Supports both:
+      with trace_span("step-name", {"input": data})
+    and legacy syntax:
+      with trace_span(trace, "step-name", {"input": data})
+    """
+    if isinstance(name_or_trace, str):
+        span_name = name_or_trace
+        span_input = input_data if input_data is not None else name
+    else:
+        span_name = name or "step"
+        span_input = input_data
+
+    client = get_langfuse()
+    if client is None:
+        yield SpanWrapper(None)
+        return
+
     try:
-        from langfuse.callback import CallbackHandler
-        return CallbackHandler(
-            trace_id=trace.id,
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-        )
-    except Exception:
-        return None
+        with client.start_as_current_observation(name=span_name, as_type=as_type, input=span_input) as span:
+            yield SpanWrapper(span)
+    except Exception as e:
+        yield SpanWrapper(None)
 
 
 def create_trace(query: str, user_id: str = "anonymous", metadata: dict = None):
     """
-    Creates a new Langfuse trace for a search request.
-    Returns None if tracing is not configured (zero overhead).
+    Compatibility helper for root trace context.
+    Under @observe_search, root trace is created automatically.
     """
-    langfuse = get_langfuse()
-    if langfuse is None:
+    client = get_langfuse()
+    if client is None:
         return None
-    return langfuse.trace(
-        name="smartfind-search",
-        input={"query": query},
-        user_id=user_id,
-        metadata=metadata or {},
-    )
+    return SpanWrapper(None)
 
 
-@contextmanager
-def trace_span(trace, name: str, input_data: Any = None):
+def create_langchain_handler(trace=None):
     """
-    Context manager for manually instrumenting a pipeline step.
-
-    Usage:
-        with trace_span(trace, "pinecone-vector-search", {"query": q}) as span:
-            results = vectorstore.similarity_search(q)
-            if span:
-                span.end(output={"count": len(results)})
+    Creates a LangChain CallbackHandler for automatic Groq LLM tracing.
+    Captures prompt AST queries, latencies, tokens, and cost.
     """
-    if trace is None:
-        yield None
-        return
-
-    span = trace.span(name=name, input=input_data)
-    start = time.perf_counter()
+    if not is_tracing_enabled():
+        return None
     try:
-        yield span
+        from langfuse.langchain import CallbackHandler
+        return CallbackHandler()
     except Exception as e:
-        if span:
-            span.end(
-                output={"error": str(e)},
-                level="ERROR",
-                status_message=str(e),
-            )
-        raise
-    finally:
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        # Latency is auto-tracked, but we add it as metadata for quick filtering
-        if span and not getattr(span, "_ended", False):
-            span.update(metadata={"latency_ms": round(elapsed_ms, 2)})
+        print(f"[Langfuse] CallbackHandler creation warning: {e}")
+        return None
+
+
+def get_trace_url() -> Optional[str]:
+    """Returns the direct web dashboard URL for the current active trace."""
+    client = get_langfuse()
+    if client:
+        try:
+            return client.get_trace_url()
+        except Exception:
+            return None
+    return None
 
 
 def flush_tracing():
-    """Flush any pending trace events. Call at shutdown."""
-    langfuse = get_langfuse()
-    if langfuse:
-        langfuse.flush()
+    """Flush pending trace events to Langfuse Cloud."""
+    client = get_langfuse()
+    if client:
+        try:
+            client.flush()
+        except Exception as e:
+            print(f"[Langfuse] Flush warning: {e}")
