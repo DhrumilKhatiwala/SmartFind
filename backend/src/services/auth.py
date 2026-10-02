@@ -44,14 +44,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
 
-def create_access_token(user_id: str, email: str) -> str:
+def create_access_token(user_id: str, email: str, username: Optional[str] = None) -> str:
     """
-    Create a signed JWT access token with user_id and email in the payload.
+    Create a signed JWT access token with user_id, email, and username in the payload.
     """
     expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRY_MINUTES)
     payload = {
         "sub": user_id,
         "email": email,
+        "username": username or "",
         "exp": expire,
     }
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
@@ -71,7 +72,8 @@ def decode_access_token(token: str) -> Optional[dict]:
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """
     FastAPI dependency that extracts and validates the current user from the JWT token.
-    Returns the user info dict (id, username, email).
+    Decodes the cryptographically verified JWT payload directly, eliminating an extra
+    database query on every cart and user operation for maximum speed.
     """
     token = credentials.credentials
     payload = decode_access_token(token)
@@ -90,18 +92,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Invalid token payload.",
         )
 
-    db = get_database()
-    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    username = payload.get("username")
+    email = payload.get("email", "")
+    if not username:
+        username = email.split("@")[0] if "@" in email else "User"
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found.",
-        )
-
-    # Return user dict without password hash
     return {
-        "id": str(user["_id"]),
-        "username": user["username"],
-        "email": user["email"],
+        "id": user_id,
+        "username": username,
+        "email": email,
     }

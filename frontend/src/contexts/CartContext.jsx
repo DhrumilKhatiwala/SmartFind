@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
@@ -26,17 +26,17 @@ export const CartProvider = ({ children }) => {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  const authHeaders = useMemo(() => {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }, [token]);
 
   // Load cart on auth change (guest vs registered)
   useEffect(() => {
     if (isGuest) {
-      // Guest: load from sessionStorage
       try {
         const stored = sessionStorage.getItem('sf_guest_cart');
         if (stored) {
-          const parsed = JSON.parse(stored);
-          setCart(computeCartTotals(parsed));
+          setCart(computeCartTotals(JSON.parse(stored)));
         } else {
           setCart({ items: [], item_count: 0, total_price: 0 });
         }
@@ -45,7 +45,6 @@ export const CartProvider = ({ children }) => {
       }
       setSummary(null);
     } else if (isAuthenticated && token) {
-      // Registered: fetch from MongoDB
       fetchCart();
     } else {
       setCart({ items: [], item_count: 0, total_price: 0 });
@@ -74,59 +73,65 @@ export const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [token, isGuest]);
+  }, [token, isGuest, authHeaders]);
 
+  // Optimistic Add to Cart (0ms instant UI feedback)
   const addToCart = useCallback(async (product) => {
     if (!isAuthenticated) return false;
 
-    if (isGuest) {
-      // Guest mode: update sessionStorage
-      try {
-        const stored = sessionStorage.getItem('sf_guest_cart');
-        const currentItems = stored ? JSON.parse(stored) : [];
-        const existingIdx = currentItems.findIndex(it => it.product_id === product.product_id);
+    // 1. Immediately calculate and update UI optimistically
+    const prevCart = cart;
+    const existingIdx = cart.items.findIndex(it => it.product_id === product.product_id);
+    let optimisticItems;
 
-        let updatedItems;
-        if (existingIdx >= 0) {
-          updatedItems = [...currentItems];
-          updatedItems[existingIdx].quantity = Math.min((updatedItems[existingIdx].quantity || 1) + (product.quantity || 1), 99);
-        } else {
-          updatedItems = [...currentItems, { ...product, quantity: product.quantity || 1 }];
-        }
-
-        sessionStorage.setItem('sf_guest_cart', JSON.stringify(updatedItems));
-        setCart(computeCartTotals(updatedItems));
-        setSummary(null);
-        return true;
-      } catch (err) {
-        console.error('Failed to add to guest cart:', err);
-        return false;
-      }
+    if (existingIdx >= 0) {
+      optimisticItems = [...cart.items];
+      optimisticItems[existingIdx] = {
+        ...optimisticItems[existingIdx],
+        quantity: Math.min((optimisticItems[existingIdx].quantity || 1) + (product.quantity || 1), 99),
+      };
+    } else {
+      optimisticItems = [...cart.items, { ...product, quantity: product.quantity || 1 }];
     }
 
-    // Registered mode: send to MongoDB API
+    setCart(computeCartTotals(optimisticItems));
+    setSummary(null);
+
+    // If guest: save to sessionStorage and return immediately
+    if (isGuest) {
+      try {
+        sessionStorage.setItem('sf_guest_cart', JSON.stringify(optimisticItems));
+      } catch (err) {
+        console.error('Failed to store guest cart:', err);
+      }
+      return true;
+    }
+
+    // If registered: sync with backend in background
     try {
       const res = await axios.post(`${API_BASE_URL}/cart/add`, product, { headers: authHeaders });
+      // Keep server response in sync
       setCart(res.data);
-      setSummary(null);
       return true;
     } catch (err) {
-      console.error('Failed to add to cart:', err);
+      console.error('Failed to add to cart, rolling back:', err);
+      setCart(prevCart);
       return false;
     }
-  }, [token, isAuthenticated, isGuest]);
+  }, [isAuthenticated, isGuest, cart, authHeaders]);
 
+  // Optimistic Update Quantity (0ms instant UI feedback)
   const updateQuantity = useCallback(async (productId, quantity) => {
+    const prevCart = cart;
+    const optimisticItems = cart.items.map(it =>
+      it.product_id === productId ? { ...it, quantity } : it
+    );
+    setCart(computeCartTotals(optimisticItems));
+    setSummary(null);
+
     if (isGuest) {
       try {
-        const stored = sessionStorage.getItem('sf_guest_cart');
-        const currentItems = stored ? JSON.parse(stored) : [];
-        const updatedItems = currentItems.map(it => 
-          it.product_id === productId ? { ...it, quantity } : it
-        );
-        sessionStorage.setItem('sf_guest_cart', JSON.stringify(updatedItems));
-        setCart(computeCartTotals(updatedItems));
-        setSummary(null);
+        sessionStorage.setItem('sf_guest_cart', JSON.stringify(optimisticItems));
       } catch (err) {
         console.error('Failed to update guest quantity:', err);
       }
@@ -141,21 +146,22 @@ export const CartProvider = ({ children }) => {
         { headers: authHeaders }
       );
       setCart(res.data);
-      setSummary(null);
     } catch (err) {
-      console.error('Failed to update quantity:', err);
+      console.error('Failed to update quantity, rolling back:', err);
+      setCart(prevCart);
     }
-  }, [token, isGuest]);
+  }, [token, isGuest, cart, authHeaders]);
 
+  // Optimistic Remove Item (0ms instant UI feedback)
   const removeItem = useCallback(async (productId) => {
+    const prevCart = cart;
+    const optimisticItems = cart.items.filter(it => it.product_id !== productId);
+    setCart(computeCartTotals(optimisticItems));
+    setSummary(null);
+
     if (isGuest) {
       try {
-        const stored = sessionStorage.getItem('sf_guest_cart');
-        const currentItems = stored ? JSON.parse(stored) : [];
-        const updatedItems = currentItems.filter(it => it.product_id !== productId);
-        sessionStorage.setItem('sf_guest_cart', JSON.stringify(updatedItems));
-        setCart(computeCartTotals(updatedItems));
-        setSummary(null);
+        sessionStorage.setItem('sf_guest_cart', JSON.stringify(optimisticItems));
       } catch (err) {
         console.error('Failed to remove guest item:', err);
       }
@@ -169,17 +175,20 @@ export const CartProvider = ({ children }) => {
         { headers: authHeaders }
       );
       setCart(res.data);
-      setSummary(null);
     } catch (err) {
-      console.error('Failed to remove item:', err);
+      console.error('Failed to remove item, rolling back:', err);
+      setCart(prevCart);
     }
-  }, [token, isGuest]);
+  }, [token, isGuest, cart, authHeaders]);
 
+  // Optimistic Clear Cart (0ms instant UI feedback)
   const clearCart = useCallback(async () => {
+    const prevCart = cart;
+    setCart({ items: [], item_count: 0, total_price: 0 });
+    setSummary(null);
+
     if (isGuest) {
       sessionStorage.removeItem('sf_guest_cart');
-      setCart({ items: [], item_count: 0, total_price: 0 });
-      setSummary(null);
       return;
     }
 
@@ -187,11 +196,11 @@ export const CartProvider = ({ children }) => {
     try {
       const res = await axios.delete(`${API_BASE_URL}/cart`, { headers: authHeaders });
       setCart(res.data);
-      setSummary(null);
     } catch (err) {
-      console.error('Failed to clear cart:', err);
+      console.error('Failed to clear cart, rolling back:', err);
+      setCart(prevCart);
     }
-  }, [token, isGuest]);
+  }, [token, isGuest, cart, authHeaders]);
 
   const fetchSummary = useCallback(async () => {
     if (cart.item_count === 0) return;
@@ -199,11 +208,9 @@ export const CartProvider = ({ children }) => {
     try {
       setSummaryLoading(true);
       if (isGuest) {
-        // Call guest summary endpoint with current cart items
         const res = await axios.post(`${API_BASE_URL}/cart/guest-summary`, { items: cart.items });
         setSummary(res.data);
       } else {
-        // Call registered user summary endpoint
         const res = await axios.get(`${API_BASE_URL}/cart/summary`, { headers: authHeaders });
         setSummary(res.data);
       }
@@ -212,7 +219,7 @@ export const CartProvider = ({ children }) => {
     } finally {
       setSummaryLoading(false);
     }
-  }, [token, isGuest, cart.item_count, cart.items]);
+  }, [token, isGuest, cart.item_count, cart.items, authHeaders]);
 
   const value = {
     cart,

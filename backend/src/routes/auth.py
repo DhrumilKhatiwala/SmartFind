@@ -1,14 +1,13 @@
 """
-Authentication API routes: registration, login, and user profile.
+Authentication API routes: registration, login, and profile inspection.
 """
 
 from datetime import datetime, timezone
-
 from fastapi import APIRouter, HTTPException, status, Depends
-from pymongo.errors import DuplicateKeyError
+from bson import ObjectId
 
 from src.database import get_database
-from src.schemas.auth import UserRegister, UserLogin, UserResponse, Token
+from src.schemas.auth import UserRegister, UserLogin, Token, UserResponse
 from src.services.auth import (
     hash_password,
     verify_password,
@@ -27,27 +26,22 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 )
 async def register(payload: UserRegister):
     """
-    Create a new user account with username, email, and password.
-    Returns a JWT access token on success.
+    Create a new user with email, username, and password.
+    Returns a JWT access token upon successful registration.
     """
     db = get_database()
 
-    # Hash the password
-    password_hash = hash_password(payload.password)
+    # Normalize fields
+    email = payload.email.strip().lower()
+    username = payload.username.strip()
 
-    user_doc = {
-        "username": payload.username.strip().lower(),
-        "email": payload.email.strip().lower(),
-        "password_hash": password_hash,
-        "created_at": datetime.now(timezone.utc),
-    }
+    # Check for existing user
+    existing_user = await db.users.find_one({
+        "$or": [{"email": email}, {"username": username}]
+    })
 
-    try:
-        result = await db.users.insert_one(user_doc)
-    except DuplicateKeyError:
-        # Check which field caused the duplicate
-        existing = await db.users.find_one({"email": user_doc["email"]})
-        if existing:
+    if existing_user:
+        if existing_user.get("email") == email:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="An account with this email already exists.",
@@ -57,15 +51,23 @@ async def register(payload: UserRegister):
             detail="This username is already taken.",
         )
 
+    user_doc = {
+        "username": username,
+        "email": email,
+        "password_hash": hash_password(payload.password),
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    result = await db.users.insert_one(user_doc)
     user_id = str(result.inserted_id)
-    access_token = create_access_token(user_id, user_doc["email"])
+    access_token = create_access_token(user_id, email, username=username)
 
     return Token(
         access_token=access_token,
         user=UserResponse(
             id=user_id,
-            username=user_doc["username"],
-            email=user_doc["email"],
+            username=username,
+            email=email,
         ),
     )
 
@@ -81,8 +83,9 @@ async def login(payload: UserLogin):
     Returns a JWT access token on success.
     """
     db = get_database()
+    email = payload.email.strip().lower()
 
-    user = await db.users.find_one({"email": payload.email.strip().lower()})
+    user = await db.users.find_one({"email": email})
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -96,13 +99,14 @@ async def login(payload: UserLogin):
         )
 
     user_id = str(user["_id"])
-    access_token = create_access_token(user_id, user["email"])
+    username = user.get("username", email.split("@")[0])
+    access_token = create_access_token(user_id, user["email"], username=username)
 
     return Token(
         access_token=access_token,
         user=UserResponse(
             id=user_id,
-            username=user["username"],
+            username=username,
             email=user["email"],
         ),
     )
@@ -111,11 +115,12 @@ async def login(payload: UserLogin):
 @router.get(
     "/me",
     response_model=UserResponse,
-    summary="Get current authenticated user profile",
+    summary="Get current user profile",
 )
 async def get_me(current_user: dict = Depends(get_current_user)):
-    """
-    Returns the profile of the currently authenticated user.
-    Requires a valid JWT Bearer token.
-    """
-    return UserResponse(**current_user)
+    """Retrieve profile information for the authenticated user."""
+    return UserResponse(
+        id=current_user["id"],
+        username=current_user["username"],
+        email=current_user["email"],
+    )

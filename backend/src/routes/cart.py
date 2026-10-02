@@ -1,5 +1,5 @@
 """
-Shopping cart API routes: CRUD operations and Groq-powered AI cart summary.
+Shopping cart API routes: high-performance atomic CRUD operations and Groq-powered AI cart summary.
 Supports both persistent MongoDB carts (for authenticated users) and
 stateless guest session cart summarization.
 """
@@ -11,6 +11,7 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from bson import ObjectId
+from pymongo import ReturnDocument
 from groq import Groq
 
 from src.database import get_database
@@ -147,142 +148,124 @@ async def get_cart(current_user: dict = Depends(get_current_user)):
     "/add",
     response_model=CartResponse,
     status_code=status.HTTP_200_OK,
-    summary="Add a product to the cart",
+    summary="Add a product to the cart (Fast atomic operation)",
 )
 async def add_to_cart(
     payload: CartItemAdd,
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Add a product to the user's cart in MongoDB. If the product already exists,
-    its quantity is incremented by the specified amount.
+    Add a product to the user's cart in a single atomic database round-trip.
+    If the product already exists, its quantity is incremented.
     """
     db = get_database()
     user_id = current_user["id"]
+    now = datetime.now(timezone.utc)
 
-    cart = await db.carts.find_one({"user_id": user_id})
-
-    if not cart:
-        cart_doc = {
-            "user_id": user_id,
-            "items": [
-                {
-                    "product_id": payload.product_id,
-                    "title": payload.title,
-                    "price": payload.price,
-                    "image": payload.image,
-                    "category": payload.category,
-                    "quantity": payload.quantity,
-                }
-            ],
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
-        }
-        await db.carts.insert_one(cart_doc)
-        return _build_cart_response(cart_doc)
-
-    items = cart.get("items", [])
-    found = False
-    for item in items:
-        if item["product_id"] == payload.product_id:
-            item["quantity"] = min(item["quantity"] + payload.quantity, 99)
-            found = True
-            break
-
-    if not found:
-        items.append(
-            {
-                "product_id": payload.product_id,
-                "title": payload.title,
-                "price": payload.price,
-                "image": payload.image,
-                "category": payload.category,
-                "quantity": payload.quantity,
-            }
-        )
-
-    await db.carts.update_one(
-        {"user_id": user_id},
-        {"$set": {"items": items, "updated_at": datetime.now(timezone.utc)}},
+    # 1. Try to increment quantity if item already exists in cart
+    updated_cart = await db.carts.find_one_and_update(
+        {"user_id": user_id, "items.product_id": payload.product_id},
+        {
+            "$inc": {"items.$.quantity": payload.quantity},
+            "$set": {"updated_at": now},
+        },
+        return_document=ReturnDocument.AFTER,
     )
 
-    cart["items"] = items
-    return _build_cart_response(cart)
+    if updated_cart:
+        return _build_cart_response(updated_cart)
+
+    # 2. If item is not in cart, append item or create new cart (upsert) in 1 atomic trip
+    new_item = {
+        "product_id": payload.product_id,
+        "title": payload.title,
+        "price": payload.price,
+        "image": payload.image,
+        "category": payload.category,
+        "quantity": payload.quantity,
+    }
+
+    updated_cart = await db.carts.find_one_and_update(
+        {"user_id": user_id},
+        {
+            "$push": {"items": new_item},
+            "$set": {"updated_at": now},
+            "$setOnInsert": {"created_at": now},
+        },
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+
+    return _build_cart_response(updated_cart)
 
 
 @router.patch(
     "/{product_id}",
     response_model=CartResponse,
-    summary="Update quantity of a cart item",
+    summary="Update quantity of a cart item (Atomic operation)",
 )
 async def update_cart_item(
     product_id: str,
     payload: CartItemUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-    """Update the quantity of an existing item in the cart."""
+    """Update item quantity in a single atomic database round-trip."""
     db = get_database()
     user_id = current_user["id"]
 
-    cart = await db.carts.find_one({"user_id": user_id})
-    if not cart:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cart not found.")
-
-    item_idx = None
-    for idx, item in enumerate(cart.get("items", [])):
-        if item["product_id"] == product_id:
-            item_idx = idx
-            break
-
-    if item_idx is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not in cart.")
-
-    cart["items"][item_idx]["quantity"] = payload.quantity
-
-    await db.carts.update_one(
-        {"user_id": user_id},
-        {"$set": {"items": cart["items"], "updated_at": datetime.now(timezone.utc)}},
+    updated_cart = await db.carts.find_one_and_update(
+        {"user_id": user_id, "items.product_id": product_id},
+        {
+            "$set": {
+                "items.$.quantity": payload.quantity,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        },
+        return_document=ReturnDocument.AFTER,
     )
 
-    return _build_cart_response(cart)
+    if not updated_cart:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found in cart.")
+
+    return _build_cart_response(updated_cart)
 
 
 @router.delete(
     "/{product_id}",
     response_model=CartResponse,
-    summary="Remove an item from the cart",
+    summary="Remove an item from the cart (Atomic operation)",
 )
 async def remove_cart_item(
     product_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    """Remove a specific product from the user's cart."""
+    """Remove a product from the user's cart in a single atomic database round-trip."""
     db = get_database()
     user_id = current_user["id"]
 
-    await db.carts.update_one(
+    updated_cart = await db.carts.find_one_and_update(
         {"user_id": user_id},
         {
             "$pull": {"items": {"product_id": product_id}},
             "$set": {"updated_at": datetime.now(timezone.utc)},
         },
+        return_document=ReturnDocument.AFTER,
     )
 
-    updated_cart = await db.carts.find_one({"user_id": user_id})
     return _build_cart_response(updated_cart)
 
 
 @router.delete(
     "",
     response_model=CartResponse,
-    summary="Clear the entire cart",
+    summary="Clear the entire cart (Atomic operation)",
 )
 async def clear_cart(current_user: dict = Depends(get_current_user)):
-    """Remove all items from the user's cart."""
+    """Clear all items in a single atomic database round-trip."""
     db = get_database()
     user_id = current_user["id"]
 
-    await db.carts.update_one(
+    updated_cart = await db.carts.find_one_and_update(
         {"user_id": user_id},
         {
             "$set": {
@@ -290,9 +273,10 @@ async def clear_cart(current_user: dict = Depends(get_current_user)):
                 "updated_at": datetime.now(timezone.utc),
             }
         },
+        return_document=ReturnDocument.AFTER,
     )
 
-    return CartResponse(items=[], item_count=0, total_price=0.0)
+    return _build_cart_response(updated_cart)
 
 
 @router.get(
