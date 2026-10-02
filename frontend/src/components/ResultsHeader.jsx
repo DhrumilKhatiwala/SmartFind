@@ -7,7 +7,7 @@ import { IconZap } from './Icons';
  */
 const ResultsHeader = ({ count, query, latencyMs }) => {
   return (
-    <div style={styles.container}>
+    <div className="results-header-container" style={styles.container}>
       <div style={styles.left}>
         <div style={styles.titleRow}>
           <h2 style={styles.countText}>
@@ -49,6 +49,7 @@ const styles = {
     borderBottom: '1.5px solid #e2e8f0',
     width: '100%',
     minWidth: 0,
+    boxSizing: 'border-box',
   },
   left: {
     display: 'flex',
@@ -79,6 +80,7 @@ const styles = {
     border: '1px solid #e2e8f0',
     padding: '2px 8px',
     borderRadius: '6px',
+    whiteSpace: 'nowrap',
   },
   queryText: {
     fontSize: '0.86rem',
@@ -94,6 +96,7 @@ const styles = {
   right: {
     display: 'flex',
     alignItems: 'center',
+    flexShrink: 0,
   },
   badge: {
     display: 'inline-flex',

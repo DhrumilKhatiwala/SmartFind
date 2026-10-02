@@ -9,15 +9,15 @@ const Header = () => {
   const navigate = useNavigate();
 
   return (
-    <header style={styles.header}>
-      <div style={styles.topRow}>
-        {/* Spacer for balance */}
-        <div style={styles.spacer} />
+    <header className="header-container" style={styles.header}>
+      <div className="header-top-row" style={styles.topRow}>
+        {/* Spacer for desktop balance */}
+        <div className="header-spacer" style={styles.spacer} />
 
         {/* Center title with Brand Logo */}
-        <div style={styles.centerBlock}>
+        <div className="header-brand-block" style={styles.centerBlock}>
           <div style={styles.brandRow} onClick={() => navigate('/')}>
-            <Logo size={42} />
+            <Logo size={38} />
             <h1 className="header-title" style={styles.title}>
               SmartFind
             </h1>
@@ -25,20 +25,21 @@ const Header = () => {
         </div>
 
         {/* Right actions */}
-        <div style={styles.actions}>
+        <div className="header-actions" style={styles.actions}>
           {isAuthenticated ? (
             <>
               <CartIcon />
               {isGuest ? (
                 /* Guest Session Pill */
-                <div style={styles.guestPill}>
+                <div className="guest-pill" style={styles.guestPill}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#b45309', flexShrink: 0 }}>
                     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <span style={styles.guestBadge}>Guest</span>
+                  <span className="guest-badge-text" style={styles.guestBadge}>Guest</span>
                   <button
                     onClick={() => navigate('/login')}
+                    className="save-cart-btn"
                     style={styles.saveCartBtn}
                     title="Sign up to keep your cart permanently"
                   >
@@ -52,7 +53,7 @@ const Header = () => {
                 </div>
               ) : (
                 /* Registered User Pill */
-                <div style={styles.userPill}>
+                <div className="user-pill" style={styles.userPill}>
                   <span style={styles.avatar}>{user?.username?.[0]?.toUpperCase() || '?'}</span>
                   <span style={styles.username}>{user?.username}</span>
                   <button onClick={logout} style={styles.logoutBtn} title="Sign Out">
@@ -90,6 +91,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+    width: '100%',
   },
   topRow: {
     display: 'flex',
@@ -102,7 +104,7 @@ const styles = {
   brandRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '10px',
     cursor: 'pointer',
     userSelect: 'none',
   },
@@ -118,6 +120,7 @@ const styles = {
     color: '#0f172a',
     margin: 0,
     cursor: 'pointer',
+    lineHeight: '1.2',
   },
   actions: {
     flex: 1,
@@ -131,7 +134,7 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     backgroundColor: '#f1f5f9',
-    padding: '6px 12px 6px 6px',
+    padding: '5px 12px 5px 6px',
     borderRadius: '28px',
     border: '1px solid #e2e8f0',
   },
@@ -176,6 +179,7 @@ const styles = {
     fontWeight: '700',
     cursor: 'pointer',
     transition: 'background-color 0.2s ease',
+    whiteSpace: 'nowrap',
   },
   logoutBtn: {
     background: 'none',

@@ -16,18 +16,18 @@ const CartPage = () => {
   const secureUrl = (url) => url ? String(url).replace(/^http:\/\//i, 'https://') : null;
 
   return (
-    <div style={styles.wrapper}>
+    <div className="cart-page-wrapper" style={styles.wrapper}>
       <div style={styles.container}>
         {/* Header Row */}
-        <div style={styles.headerRow}>
+        <div className="cart-header-row" style={styles.headerRow}>
           <div>
-            <h1 style={styles.title}>Your Cart</h1>
+            <h1 className="cart-header-title" style={styles.title}>Your Cart</h1>
             <p style={styles.subtitle}>
               {user && <span>Hey <strong>{user.username}</strong> — </span>}
               {cart.item_count === 0 ? 'Your cart is empty.' : `${cart.item_count} item${cart.item_count > 1 ? 's' : ''} in your cart.`}
             </p>
           </div>
-          <div style={styles.headerActions}>
+          <div className="cart-header-actions" style={styles.headerActions}>
             <button onClick={() => navigate('/')} style={styles.backBtn}>
               ← Back to Search
             </button>
@@ -41,9 +41,9 @@ const CartPage = () => {
 
         {/* Guest Session Notice */}
         {isGuest && (
-          <div style={styles.guestAlert}>
+          <div className="cart-guest-alert" style={styles.guestAlert}>
             <div style={styles.guestAlertIcon}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', flexShrink: 0 }}>
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="16" x2="12" y2="12" />
                 <line x1="12" y1="8" x2="12.01" y2="8" />
@@ -76,33 +76,36 @@ const CartPage = () => {
             </button>
           </div>
         ) : (
-          <div style={styles.cartLayout}>
+          <div className="cart-layout">
             {/* Left: Items List */}
-            <div style={styles.itemsList}>
+            <div className="cart-items-list" style={styles.itemsList}>
               {cart.items.map((item) => (
-                <div key={item.product_id} style={styles.itemCard}>
-                  {item.image && (
-                    <img
-                      src={secureUrl(item.image)}
-                      alt={item.title}
-                      style={styles.itemImage}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  )}
-                  <div style={styles.itemDetails}>
-                    <h3 style={styles.itemTitle}>{item.title}</h3>
-                    {item.category && <span style={styles.itemCat}>{item.category}</span>}
-                    <div style={styles.itemPriceRow}>
-                      <span style={styles.itemPrice}>{formatPrice(item.price)}</span>
-                      {item.quantity > 1 && (
-                        <span style={styles.itemSubtotal}>
-                          Total: {formatPrice(item.price * item.quantity)}
-                        </span>
-                      )}
+                <div key={item.product_id} className="cart-item-card" style={styles.itemCard}>
+                  <div className="cart-item-top" style={styles.itemTop}>
+                    {item.image && (
+                      <img
+                        src={secureUrl(item.image)}
+                        alt={item.title}
+                        className="cart-item-image"
+                        style={styles.itemImage}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    )}
+                    <div className="cart-item-details" style={styles.itemDetails}>
+                      <h3 style={styles.itemTitle}>{item.title}</h3>
+                      {item.category && <span style={styles.itemCat}>{item.category}</span>}
+                      <div style={styles.itemPriceRow}>
+                        <span style={styles.itemPrice}>{formatPrice(item.price)}</span>
+                        {item.quantity > 1 && (
+                          <span style={styles.itemSubtotal}>
+                            Total: {formatPrice(item.price * item.quantity)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={styles.itemActions}>
+                  <div className="cart-item-actions" style={styles.itemActions}>
                     <div style={styles.quantityPicker}>
                       <button
                         onClick={() => {
@@ -110,6 +113,7 @@ const CartPage = () => {
                           else removeItem(item.product_id);
                         }}
                         style={styles.qtyBtn}
+                        aria-label="Decrease quantity"
                       >
                         -
                       </button>
@@ -117,6 +121,7 @@ const CartPage = () => {
                       <button
                         onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                         style={styles.qtyBtn}
+                        aria-label="Increase quantity"
                       >
                         +
                       </button>
@@ -126,7 +131,11 @@ const CartPage = () => {
                       onClick={() => removeItem(item.product_id)}
                       style={styles.removeBtn}
                       title="Remove product"
+                      aria-label="Remove item"
                     >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      </svg>
                       Delete
                     </button>
                   </div>
@@ -135,7 +144,7 @@ const CartPage = () => {
             </div>
 
             {/* Right: Cart Summary & Groq AI Assistant */}
-            <div style={styles.summarySidebar}>
+            <div className="cart-summary-sidebar" style={styles.summarySidebar}>
               <div style={styles.summaryCard}>
                 <h2 style={styles.summaryHeading}>Order Summary</h2>
                 <div style={styles.summaryRow}>
@@ -144,17 +153,32 @@ const CartPage = () => {
                 </div>
                 <div style={styles.summaryRow}>
                   <span style={styles.summaryLabel}>Subtotal:</span>
-                  <span style={styles.summaryTotal}>{formatPrice(cart.total_price)}</span>
+                  <span style={styles.summaryValue}>{formatPrice(cart.total_price)}</span>
+                </div>
+                <div style={styles.summaryRow}>
+                  <span style={styles.summaryLabel}>Shipping:</span>
+                  <span style={{ color: '#059669', fontWeight: '700' }}>FREE</span>
                 </div>
 
                 <hr style={styles.divider} />
 
-                {/* AI Cart Summary */}
+                <div style={{ ...styles.summaryRow, marginBottom: '20px' }}>
+                  <span style={{ ...styles.summaryLabel, fontWeight: '700', color: '#0f172a' }}>Estimated Total:</span>
+                  <span style={styles.summaryTotal}>{formatPrice(cart.total_price)}</span>
+                </div>
+
+                {/* Groq AI Cart Intelligence */}
                 <div style={styles.aiSection}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    <span style={styles.summaryTitle}>AI Cart Assistant</span>
+                  </div>
+
                   {summary ? (
                     <div style={styles.aiSummaryBox}>
-                      <h4 style={styles.summaryTitle}>Cart Insights</h4>
-                      <p style={styles.aiText}>{summary.summary}</p>
+                      <p style={styles.aiText}>{summary.summary || summary.summary_text}</p>
                       {summary.category_breakdown && summary.category_breakdown.length > 0 && (
                         <div style={styles.catBreakdown}>
                           <h4 style={styles.catHeading}>Category Breakdown:</h4>
@@ -199,6 +223,7 @@ const styles = {
   container: {
     maxWidth: '1100px',
     margin: '0 auto',
+    width: '100%',
   },
   headerRow: {
     display: 'flex',
@@ -223,9 +248,10 @@ const styles = {
   headerActions: {
     display: 'flex',
     gap: '10px',
+    alignItems: 'center',
   },
   backBtn: {
-    padding: '8px 16px',
+    padding: '9px 16px',
     backgroundColor: '#ffffff',
     color: '#334155',
     border: '1px solid #cbd5e1',
@@ -233,9 +259,11 @@ const styles = {
     fontSize: '0.88rem',
     fontWeight: '600',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
   },
   clearBtn: {
-    padding: '8px 16px',
+    padding: '9px 16px',
     backgroundColor: '#fee2e2',
     color: '#dc2626',
     border: '1px solid #fecaca',
@@ -243,6 +271,8 @@ const styles = {
     fontSize: '0.88rem',
     fontWeight: '600',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
   },
   guestAlert: {
     display: 'flex',
@@ -255,7 +285,8 @@ const styles = {
     marginBottom: '22px',
   },
   guestAlertIcon: {
-    fontSize: '1.4rem',
+    display: 'flex',
+    alignItems: 'center',
   },
   guestAlertContent: {
     fontSize: '0.88rem',
@@ -316,12 +347,6 @@ const styles = {
     fontWeight: '700',
     cursor: 'pointer',
   },
-  cartLayout: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 360px',
-    gap: '24px',
-    alignItems: 'start',
-  },
   itemsList: {
     display: 'flex',
     flexDirection: 'column',
@@ -332,9 +357,13 @@ const styles = {
     borderRadius: '16px',
     padding: '16px 20px',
     border: '1px solid #e2e8f0',
+  },
+  itemTop: {
     display: 'flex',
     alignItems: 'center',
-    gap: '18px',
+    gap: '16px',
+    flex: 1,
+    minWidth: 0,
   },
   itemImage: {
     width: '80px',
@@ -342,12 +371,14 @@ const styles = {
     objectFit: 'contain',
     borderRadius: '8px',
     backgroundColor: '#f8fafc',
+    flexShrink: 0,
   },
   itemDetails: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
+    minWidth: 0,
   },
   itemTitle: {
     fontSize: '0.95rem',
@@ -355,6 +386,8 @@ const styles = {
     color: '#0f172a',
     margin: 0,
     lineHeight: '1.35',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
   },
   itemCat: {
     fontSize: '0.75rem',
@@ -363,12 +396,17 @@ const styles = {
     padding: '2px 8px',
     borderRadius: '6px',
     alignSelf: 'flex-start',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   itemPriceRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
     marginTop: '4px',
+    flexWrap: 'wrap',
   },
   itemPrice: {
     fontSize: '1rem',
@@ -388,35 +426,44 @@ const styles = {
   quantityPicker: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
     backgroundColor: '#f1f5f9',
     borderRadius: '10px',
-    padding: '3px 8px',
+    padding: '4px 8px',
   },
   qtyBtn: {
     background: 'none',
     border: 'none',
     fontWeight: '700',
-    fontSize: '1rem',
+    fontSize: '1.1rem',
     color: '#334155',
     cursor: 'pointer',
-    padding: '2px 6px',
+    padding: '2px 8px',
+    minWidth: '28px',
+    minHeight: '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   qtyNum: {
-    fontSize: '0.9rem',
+    fontSize: '0.92rem',
     fontWeight: '700',
     color: '#0f172a',
-    minWidth: '18px',
+    minWidth: '20px',
     textAlign: 'center',
   },
   removeBtn: {
     background: 'none',
     border: 'none',
-    color: '#94a3b8',
-    fontSize: '0.8rem',
+    color: '#dc2626',
+    fontSize: '0.82rem',
+    fontWeight: '600',
     cursor: 'pointer',
-    padding: '2px',
-    transition: 'color 0.2s ease',
+    padding: '4px 8px',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'all 0.15s ease',
   },
   summarySidebar: {
     position: 'sticky',
@@ -465,7 +512,7 @@ const styles = {
     fontSize: '0.88rem',
     fontWeight: '700',
     color: '#4f46e5',
-    margin: '0 0 8px 0',
+    margin: 0,
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
   },

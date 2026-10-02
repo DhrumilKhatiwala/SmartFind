@@ -1,3 +1,4 @@
+/* SmartFind Global Design System & Responsive Stylesheet */
 :root {
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -49,6 +50,15 @@ body {
   word-wrap: break-word;
 }
 
+#root, .app {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   overflow-wrap: break-word;
@@ -80,8 +90,10 @@ input:focus, button:focus-visible {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive Product Grid */
-.product-grid {
+/* =========================================================
+   Responsive Product & Skeleton Grids
+   ========================================================= */
+.product-grid, .skeleton-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
@@ -90,36 +102,292 @@ input:focus, button:focus-visible {
 }
 
 @media (max-width: 1200px) {
-  .product-grid {
+  .product-grid, .skeleton-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
   }
 }
 
 @media (max-width: 860px) {
-  .product-grid {
+  .product-grid, .skeleton-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
   }
 }
 
 @media (max-width: 540px) {
-  .product-grid {
+  .product-grid, .skeleton-grid {
     grid-template-columns: 1fr;
     gap: 14px;
   }
 }
 
-/* Mobile & Tablet Specific Layout Rules */
+/* =========================================================
+   Header Component Responsive Rules
+   ========================================================= */
+.header-container {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.header-spacer {
+  flex: 1;
+}
+
+.header-brand-block {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.header-actions {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 @media (max-width: 768px) {
-  .app-container {
-    padding: 24px 14px 56px 14px !important;
+  .header-container {
+    margin-bottom: 20px;
+  }
+  .header-top-row {
+    margin-bottom: 12px;
+  }
+  .header-spacer {
+    display: none !important;
+  }
+  .header-brand-block {
+    flex: initial !important;
+    justify-content: flex-start !important;
+  }
+  .header-actions {
+    flex: initial !important;
+    margin-left: auto;
+    gap: 8px !important;
   }
   .header-title {
-    font-size: 2rem !important;
+    font-size: 1.85rem !important;
   }
   .header-subtitle {
     font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title {
+    font-size: 1.55rem !important;
+  }
+  .header-subtitle {
+    font-size: 0.82rem !important;
+    line-height: 1.4 !important;
+  }
+  .header-actions {
+    gap: 6px !important;
+  }
+  .guest-badge-text {
+    display: none;
+  }
+  .guest-pill {
+    padding: 4px 8px !important;
+    gap: 6px !important;
+  }
+  .save-cart-btn {
+    padding: 3px 8px !important;
+    font-size: 0.72rem !important;
+  }
+}
+
+/* =========================================================
+   Cart Page Responsive Rules
+   ========================================================= */
+.cart-page-wrapper {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 30px 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cart-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+}
+
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cart-item-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.cart-item-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cart-summary-sidebar {
+  position: sticky;
+  top: 20px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .cart-layout {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .cart-summary-sidebar {
+    position: static !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .cart-page-wrapper {
+    padding: 16px 12px !important;
+  }
+  .cart-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+  .cart-header-title {
+    font-size: 1.6rem !important;
+  }
+  .cart-header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .cart-item-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+  .cart-item-top {
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .cart-item-image {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .cart-item-actions {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 10px !important;
+    width: 100% !important;
+  }
+  .cart-guest-alert {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+    margin-bottom: 16px !important;
+  }
+}
+
+/* =========================================================
+   Query Understanding Panel Responsive Rules
+   ========================================================= */
+.pipeline-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.pipeline-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.pipeline-arrow {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .pipeline-arrow {
+    display: none !important;
+  }
+  .pipeline-steps {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .pipeline-step-item {
+    width: 100% !important;
+    flex: initial !important;
+    min-width: 0 !important;
+  }
+}
+
+/* =========================================================
+   Search Bar & Form Mobile Rules
+   ========================================================= */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 20px 14px 48px 14px !important;
   }
 }
 
@@ -133,18 +401,50 @@ input:focus, button:focus-visible {
     padding: 12px 20px !important;
     justify-content: center;
   }
+  .results-header-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
 }
 
 @media (max-width: 480px) {
   .app-container {
-    padding: 18px 10px 48px 10px !important;
+    padding: 16px 10px 40px 10px !important;
   }
-  .header-title {
-    font-size: 1.7rem !important;
+}
+
+/* =========================================================
+   Auth Page Responsive Rules
+   ========================================================= */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .auth-wrapper {
+    padding: 14px 10px !important;
   }
-  .header-subtitle {
-    font-size: 0.84rem !important;
-    line-height: 1.4 !important;
+  .auth-card {
+    padding: 26px 18px !important;
+    border-radius: 16px !important;
   }
 }
 

@@ -5,9 +5,9 @@ import Logo from '../components/Logo';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,32 +23,17 @@ const AuthPage = () => {
       if (isLogin) {
         await login(email, password);
       } else {
-        if (username.trim().length < 3) {
-          setError('Username must be at least 3 characters.');
-          setLoading(false);
-          return;
-        }
-        await register(username.trim(), email, password);
+        await register(username, email, password);
       }
       navigate('/');
     } catch (err) {
       const detail = err.response?.data?.detail;
-      if (typeof detail === 'string') {
+      if (detail) {
         setError(detail);
-      } else if (Array.isArray(detail)) {
-        // FastAPI Pydantic validation errors (e.g., email format)
-        const msg = detail.map((d) => d.msg || d.message).join(', ');
-        setError(msg || 'Please enter a valid email address and a password with at least 6 characters.');
-      } else if (err.response?.status === 401) {
-        setError('Incorrect email or password. Please check your credentials and try again.');
-      } else if (err.response?.status === 409) {
-        setError(isLogin ? 'Account conflict. Please check your details.' : 'An account with this email or username already exists.');
-      } else if (err.response?.status === 422) {
-        setError('Please enter a valid email address and password.');
-      } else if (!err.response) {
-        setError('Unable to reach the server. Please check your connection and try again.');
+      } else if (err.message && err.message.includes('Network Error')) {
+        setError('Unable to reach server. Please check your internet connection.');
       } else {
-        setError(isLogin ? 'Incorrect email or password. Please check your credentials and try again.' : 'Could not create account. Please verify your details.');
+        setError(isLogin ? 'Incorrect email or password.' : 'Failed to create account. Please check your details.');
       }
     } finally {
       setLoading(false);
@@ -66,12 +51,12 @@ const AuthPage = () => {
   };
 
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.card}>
-        {/* Logo */}
+    <div className="auth-wrapper" style={styles.wrapper}>
+      <div className="auth-card" style={styles.card}>
+        {/* Logo & Header */}
         <div style={styles.logoSection}>
           <div style={styles.brandRow}>
-            <Logo size={44} />
+            <Logo size={40} />
             <h1 style={styles.logo}>SmartFind</h1>
           </div>
           <p style={styles.tagline}>AI-Powered Product Search</p>
@@ -202,6 +187,8 @@ const styles = {
     justifyContent: 'center',
     padding: '20px',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -210,6 +197,7 @@ const styles = {
     width: '100%',
     maxWidth: '420px',
     boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15)',
+    boxSizing: 'border-box',
   },
   brandRow: {
     display: 'flex',
@@ -284,6 +272,8 @@ const styles = {
     outline: 'none',
     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     backgroundColor: '#f8fafc',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   error: {
     backgroundColor: '#fef2f2',
@@ -309,6 +299,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
+    width: '100%',
   },
   spinner: {
     width: '18px',
@@ -367,10 +358,7 @@ const styles = {
     justifyContent: 'center',
     gap: '8px',
     transition: 'all 0.2s ease',
-  },
-  guestIcon: {
-    color: '#d97706',
-    fontSize: '1.1rem',
+    boxSizing: 'border-box',
   },
   guestDisclaimer: {
     textAlign: 'center',

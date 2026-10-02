@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import {
   IconCpu,
   IconWorkflow,
+  IconChevronDown,
+  IconChevronUp,
   IconTarget,
   IconSliders,
   IconFolder,
-  IconChevronDown,
-  IconChevronUp,
 } from './Icons';
 
 /**
- * QueryUnderstandingPanel displays the extracted semantic intent,
- * active metadata constraints, pipeline indicators, and an expandable
- * step-by-step search workflow for recruiter demonstrations.
+ * QueryUnderstandingPanel displays the query understanding breakdown:
+ * - Extracted semantic intent
+ * - Detected structured constraints (price floor/ceiling, rating, category)
+ * - Walkthrough of the 4-stage search pipeline
  */
 const QueryUnderstandingPanel = ({
   query,
@@ -23,85 +24,85 @@ const QueryUnderstandingPanel = ({
 }) => {
   const [showPipeline, setShowPipeline] = useState(false);
 
+  if (!query) return null;
+
   const hasConstraints = constraints && constraints.length > 0;
 
   return (
     <section style={styles.card} aria-label="Query Understanding and Retrieval Pipeline">
-      {/* Header Bar */}
+      {/* Top Bar: Title, Badges, and Pipeline Toggle */}
       <div style={styles.topRow}>
         <div style={styles.headerLeft}>
           <div style={styles.iconWrapper}>
             <IconCpu size={16} color="#4f46e5" />
           </div>
           <span style={styles.title}>Query Understanding</span>
+
           <div style={styles.statusBadges}>
             <span style={styles.indicatorBadge}>
               <span style={styles.blueDot}></span>
-              Semantic Search
+              Semantic Intent
             </span>
+
             {hasConstraints && (
               <span style={styles.filterBadge}>
                 <span style={styles.purpleDot}></span>
-                Metadata Filtering
+                {constraints.length} Active Constraint{constraints.length > 1 ? 's' : ''}
               </span>
             )}
           </div>
         </div>
 
-        {/* Expandable Pipeline Toggle Button */}
         <button
           type="button"
-          onClick={() => setShowPipeline(!showPipeline)}
+          onClick={() => setShowPipeline((prev) => !prev)}
           style={styles.pipelineToggle}
           aria-expanded={showPipeline}
           aria-label="Toggle pipeline search explanation"
         >
           <IconWorkflow size={14} color="#4f46e5" />
-          <span>How SmartFind searched</span>
+          <span>{showPipeline ? 'Hide Pipeline' : 'How it works'}</span>
           {showPipeline ? (
-            <IconChevronUp size={13} color="#4f46e5" />
+            <IconChevronUp size={12} color="#4f46e5" />
           ) : (
-            <IconChevronDown size={13} color="#4f46e5" />
+            <IconChevronDown size={12} color="#4f46e5" />
           )}
         </button>
       </div>
 
-      {/* Extracted Query Breakdown */}
+      {/* Main Breakdown: Intent & Constraints */}
       <div style={styles.breakdownRow}>
-        {/* Semantic Intent */}
-        <div style={styles.intentGroup}>
-          <span style={styles.groupLabel}>Semantic Intent</span>
+        {/* Semantic Intent Extraction */}
+        <div className="intent-group" style={styles.intentGroup}>
+          <span style={styles.groupLabel}>Semantic Intent:</span>
           <div style={styles.intentChip}>
-            <IconTarget size={14} color="#6366f1" />
+            <IconTarget size={14} color="#6366f1" style={{ flexShrink: 0 }} />
             <span style={styles.intentText}>
-              {semanticIntent ? `"${semanticIntent}"` : `"${query}"`}
+              "{semanticIntent || query}"
             </span>
           </div>
         </div>
 
-        {/* Detected Constraints */}
-        <div style={styles.constraintsGroup}>
-          <span style={styles.groupLabel}>
-            {hasConstraints ? 'Detected Constraints' : 'Constraints'}
-          </span>
+        {/* Structured Constraints */}
+        <div className="constraints-group" style={styles.constraintsGroup}>
+          <span style={styles.groupLabel}>Applied Filters (Metadata Constraints):</span>
           <div style={styles.chipsContainer}>
             {hasConstraints ? (
-              constraints.map((c, idx) => {
+              constraints.map((c, i) => {
                 const label = typeof c === 'string' ? c : c.label;
                 const isCat = label.toLowerCase().includes('category');
-
                 return (
                   <span
-                    key={idx}
+                    key={i}
                     style={{
                       ...styles.constraintChip,
                       ...(isCat ? styles.categoryChip : {}),
                     }}
                   >
                     {isCat ? (
-                      <IconFolder size={13} color="#86198f" />
+                      <IconFolder size={13} color="#86198f" style={{ flexShrink: 0 }} />
                     ) : (
-                      <IconSliders size={13} color="#3730a3" />
+                      <IconSliders size={13} color="#3730a3" style={{ flexShrink: 0 }} />
                     )}
                     <span>{label}</span>
                   </span>
@@ -123,9 +124,9 @@ const QueryUnderstandingPanel = ({
             <span style={styles.pipelineTitle}>End-to-End Retrieval Pipeline:</span>
           </div>
 
-          <div style={styles.pipelineSteps}>
+          <div className="pipeline-steps">
             {/* Step 1 */}
-            <div style={styles.stepItem}>
+            <div className="pipeline-step-item">
               <div style={styles.stepNumber}>1</div>
               <div style={styles.stepContent}>
                 <span style={styles.stepTitle}>User Query</span>
@@ -133,10 +134,10 @@ const QueryUnderstandingPanel = ({
               </div>
             </div>
 
-            <div style={styles.stepArrow}>→</div>
+            <div className="pipeline-arrow">→</div>
 
             {/* Step 2 */}
-            <div style={styles.stepItem}>
+            <div className="pipeline-step-item">
               <div style={styles.stepNumber}>2</div>
               <div style={styles.stepContent}>
                 <span style={styles.stepTitle}>Query Understanding</span>
@@ -146,10 +147,10 @@ const QueryUnderstandingPanel = ({
               </div>
             </div>
 
-            <div style={styles.stepArrow}>→</div>
+            <div className="pipeline-arrow">→</div>
 
             {/* Step 3 */}
-            <div style={styles.stepItem}>
+            <div className="pipeline-step-item">
               <div style={styles.stepNumber}>3</div>
               <div style={styles.stepContent}>
                 <span style={styles.stepTitle}>Filtered Vector Search</span>
@@ -159,10 +160,10 @@ const QueryUnderstandingPanel = ({
               </div>
             </div>
 
-            <div style={styles.stepArrow}>→</div>
+            <div className="pipeline-arrow">→</div>
 
             {/* Step 4 */}
-            <div style={styles.stepItem}>
+            <div className="pipeline-step-item">
               <div style={styles.stepNumber}>4</div>
               <div style={styles.stepContent}>
                 <span style={styles.stepTitle}>Results & Reasoning</span>
@@ -363,6 +364,8 @@ const styles = {
     borderRadius: '12px',
     border: '1px solid #e2e8f0',
     animation: 'fadeIn 0.2s ease-in-out',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   pipelineHeader: {
     marginBottom: '10px',
@@ -373,24 +376,6 @@ const styles = {
     color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
-  },
-  pipelineSteps: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexWrap: 'wrap',
-  },
-  stepItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    padding: '8px 12px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-    flex: '1 1 180px',
-    minWidth: '160px',
   },
   stepNumber: {
     width: '20px',
@@ -421,14 +406,6 @@ const styles = {
     color: '#64748b',
     lineHeight: '1.3',
     overflowWrap: 'break-word',
-  },
-  stepArrow: {
-    color: '#94a3b8',
-    fontSize: '0.85rem',
-    fontWeight: '700',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 };
 

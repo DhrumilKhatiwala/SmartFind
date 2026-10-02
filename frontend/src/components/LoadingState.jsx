@@ -17,8 +17,8 @@ const LoadingState = () => {
       </div>
 
       {/* Skeleton Cards Grid */}
-      <div style={styles.skeletonGrid}>
-        {[1, 2, 3, 4, 5, 6].map((item) => (
+      <div className="skeleton-grid">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
           <div key={item} style={styles.skeletonCard}>
             <div style={styles.skeletonImage}></div>
             <div style={styles.skeletonContent}>
@@ -48,14 +48,16 @@ const styles = {
     backgroundColor: '#ffffff',
     border: '1px solid #e0e7ff',
     borderRadius: '16px',
-    padding: '24px 32px',
+    padding: '20px 24px',
     maxWidth: '560px',
-    margin: '0 auto 36px auto',
+    margin: '0 auto 30px auto',
     boxShadow: '0 4px 16px rgba(79, 70, 229, 0.08)',
+    boxSizing: 'border-box',
+    width: '100%',
   },
   spinner: {
-    width: '32px',
-    height: '32px',
+    width: '30px',
+    height: '30px',
     border: '3.5px solid #e0e7ff',
     borderTopColor: '#4f46e5',
     borderRadius: '50%',
@@ -66,9 +68,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
+    minWidth: 0,
   },
   statusTitle: {
-    fontSize: '1.05rem',
+    fontSize: '1rem',
     fontWeight: '700',
     color: '#1e1b4b',
     margin: 0,
@@ -77,12 +80,7 @@ const styles = {
     fontSize: '0.82rem',
     color: '#64748b',
     margin: 0,
-  },
-  skeletonGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '24px',
-    alignItems: 'start',
+    overflowWrap: 'break-word',
   },
   skeletonCard: {
     backgroundColor: '#ffffff',
@@ -90,17 +88,19 @@ const styles = {
     borderRadius: '18px',
     overflow: 'hidden',
     boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   skeletonImage: {
-    height: '210px',
+    height: '200px',
     backgroundColor: '#f1f5f9',
     animation: 'pulse 1.5s infinite ease-in-out',
   },
   skeletonContent: {
-    padding: '18px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '10px',
   },
   skeletonBadge: {
     width: '60px',
@@ -132,7 +132,7 @@ const styles = {
   },
   skeletonPrice: {
     width: '100px',
-    height: '28px',
+    height: '26px',
     backgroundColor: '#f1f5f9',
     borderRadius: '4px',
     marginTop: '4px',
