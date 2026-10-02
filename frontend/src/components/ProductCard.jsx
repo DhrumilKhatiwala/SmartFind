@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import Explanation from './Explanation';
 import { IconStar, IconCheckCircle } from './Icons';
 
@@ -14,6 +16,32 @@ const ProductCard = ({
   onToggleExplanation,
 }) => {
   const [imageError, setImageError] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      window.location.href = '/login';
+      return;
+    }
+    const { price, category, image } = product?.metadata || {};
+    const { title: pTitle } = parseProductContent(product?.page_content);
+    // Create a stable product_id from content
+    const productId = btoa(unescape(encodeURIComponent((product?.page_content || '').slice(0, 100)))).slice(0, 40);
+    const success = await addToCart({
+      product_id: productId,
+      title: pTitle || 'Unknown Product',
+      price: price || 0,
+      image: image || null,
+      category: category || null,
+      quantity: 1,
+    });
+    if (success) {
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
+    }
+  };
 
   const formatPrice = (priceVal) => {
     if (priceVal === null || priceVal === undefined) return 'N/A';
@@ -141,6 +169,17 @@ const ProductCard = ({
           isOpen={isExplanationOpen}
           onToggle={onToggleExplanation}
         />
+
+        {/* Add to Cart Button */}
+        <button
+          onClick={handleAddToCart}
+          style={{
+            ...styles.addToCartBtn,
+            backgroundColor: addedToCart ? '#059669' : '#4f46e5',
+          }}
+        >
+          {addedToCart ? 'Added!' : 'Add to Cart'}
+        </button>
       </div>
     </article>
   );
@@ -323,6 +362,18 @@ const styles = {
     color: '#94a3b8',
     textDecoration: 'line-through',
     fontWeight: '500',
+  },
+  addToCartBtn: {
+    width: '100%',
+    padding: '10px',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '0.88rem',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s ease, transform 0.1s ease',
+    marginTop: '8px',
   },
 };
 

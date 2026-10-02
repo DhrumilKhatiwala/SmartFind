@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
+import { useSearch } from './contexts/SearchContext';
 import axios from 'axios';
 import Header from './components/Header';
 import SearchBar from './components/SearchBar';
@@ -99,17 +100,30 @@ const parseSearchInsightsFallback = (queryStr, results) => {
 };
 
 const ProductSearch = () => {
-  const [query, setQuery] = useState('');
-  const [submittedQuery, setSubmittedQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [semanticIntent, setSemanticIntent] = useState('');
-  const [detectedConstraints, setDetectedConstraints] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [searched, setSearched] = useState(false);
-  const [latencyMs, setLatencyMs] = useState(null);
-  const [expandedExplanations, setExpandedExplanations] = useState({});
+  const {
+    query,
+    setQuery,
+    submittedQuery,
+    setSubmittedQuery,
+    results,
+    setResults,
+    semanticIntent,
+    setSemanticIntent,
+    detectedConstraints,
+    setDetectedConstraints,
+    currentPage,
+    setCurrentPage,
+    loading,
+    setLoading,
+    error,
+    setError,
+    searched,
+    setSearched,
+    latencyMs,
+    setLatencyMs,
+    expandedExplanations,
+    setExpandedExplanations,
+  } = useSearch();
 
   const resultsRef = useRef(null);
 

@@ -27,6 +27,8 @@ from src.services import (
     generate_structured_explanation,
 )
 from src.retriever import initialize_self_query_retriever
+from src.database import connect_to_mongo, close_mongo_connection, is_mongo_connected
+from src.routes import auth_router, cart_router
 from src.services.tracing import (
     create_trace, create_langchain_handler, trace_span, flush_tracing, observe_search, get_trace_url
 )
@@ -52,7 +54,16 @@ async def lifespan(app: FastAPI):
         raise err
 
     init_metadata_dataset()
+
+    # Connect to MongoDB for user auth & cart
+    mongo_ok = await connect_to_mongo()
+    if mongo_ok:
+        print("MongoDB connected - auth & cart features enabled.")
+    else:
+        print("MongoDB not connected - auth & cart features disabled.")
+
     yield
+    await close_mongo_connection()
     flush_tracing()
     print("Shutting down FastAPI application...")
 
@@ -74,6 +85,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include auth & cart routers (only active when MongoDB is connected)
+app.include_router(auth_router)
+app.include_router(cart_router)
+
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -86,6 +101,9 @@ async def root():
         "docs_url": "/docs",
         "health_url": "/health",
         "search_url": "POST /search",
+        "auth_enabled": is_mongo_connected(),
+        "auth_url": "POST /auth/register | POST /auth/login",
+        "cart_url": "GET /cart | POST /cart/add",
     }
 
 
@@ -100,6 +118,7 @@ async def health_check():
         "service": "SmartFind Vector Search API",
         "retriever": "ready" if is_ready else "uninitialized",
         "vectorstore": "Pinecone Cloud",
+        "mongodb": "connected" if is_mongo_connected() else "disconnected",
         "cached_products": len(product_lookup),
         "cached_queries": len(SEARCH_CACHE),
     }

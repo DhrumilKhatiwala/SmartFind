@@ -15,3 +15,8 @@ tqdm
 lark
 fastapi
 uvicorn
+motor
+pymongo[srv]
+python-jose[cryptography]
+passlib[bcrypt]
+pydantic[email]

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="sfGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="sfGlass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
+    </linearGradient>
+    <filter id="sfDrop" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#4f46e5" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#sfGradient)" filter="url(#sfDrop)" />
+  <rect x="2.5" y="2.5" width="59" height="59" rx="15.5" stroke="url(#sfGlass)" stroke-width="1.5" />
+
+  <!-- Modern Search Discovery Lens -->
+  <circle cx="28" cy="28" r="12" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+  <path d="M37 37L48 48" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+
+  <!-- Precision AI Core Indicator -->
+  <circle cx="28" cy="28" r="3.5" fill="#38bdf8" />
+  <path d="M28 20V23M28 33V36M20 28H23M33 28H36" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" />
+</svg>
