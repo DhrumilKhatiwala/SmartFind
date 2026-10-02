@@ -33,20 +33,3 @@ services:
         value: "1440"
       - key: GROQ_CART_MODEL
         value: qwen/qwen3.8-27b
-
-  - type: web
-    name: smartfind-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: smartfind-backend
-          property: host

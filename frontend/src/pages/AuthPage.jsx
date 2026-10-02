@@ -33,7 +33,23 @@ const AuthPage = () => {
       navigate('/');
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(detail || 'Something went wrong. Please try again.');
+      if (typeof detail === 'string') {
+        setError(detail);
+      } else if (Array.isArray(detail)) {
+        // FastAPI Pydantic validation errors (e.g., email format)
+        const msg = detail.map((d) => d.msg || d.message).join(', ');
+        setError(msg || 'Please enter a valid email address and a password with at least 6 characters.');
+      } else if (err.response?.status === 401) {
+        setError('Incorrect email or password. Please check your credentials and try again.');
+      } else if (err.response?.status === 409) {
+        setError(isLogin ? 'Account conflict. Please check your details.' : 'An account with this email or username already exists.');
+      } else if (err.response?.status === 422) {
+        setError('Please enter a valid email address and password.');
+      } else if (!err.response) {
+        setError('Unable to reach the server. Please check your connection and try again.');
+      } else {
+        setError(isLogin ? 'Incorrect email or password. Please check your credentials and try again.' : 'Could not create account. Please verify your details.');
+      }
     } finally {
       setLoading(false);
     }

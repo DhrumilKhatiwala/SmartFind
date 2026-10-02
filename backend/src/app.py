@@ -77,9 +77,11 @@ app = FastAPI(
 )
 
 # Configure Cross-Origin Resource Sharing (CORS)
+# allow_origin_regex ensures Vercel domains, preview deployments, and localhost
+# are dynamically reflected in Access-Control-Allow-Origin with credentials supported.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
