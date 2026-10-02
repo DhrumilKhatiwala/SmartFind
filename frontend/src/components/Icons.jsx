@@ -34,23 +34,6 @@ export const IconCpu = ({ size = 16, color = 'currentColor', style }) => (
   </svg>
 );
 
-export const IconSearch = ({ size = 16, color = 'currentColor', style }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={style}
-  >
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
 export const IconTarget = ({ size = 16, color = 'currentColor', style }) => (
   <svg
     width={size}
@@ -66,23 +49,6 @@ export const IconTarget = ({ size = 16, color = 'currentColor', style }) => (
     <circle cx="12" cy="12" r="10" />
     <circle cx="12" cy="12" r="6" />
     <circle cx="12" cy="12" r="2" />
-  </svg>
-);
-
-export const IconTag = ({ size = 16, color = 'currentColor', style }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={style}
-  >
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-    <line x1="7" y1="7" x2="7.01" y2="7" />
   </svg>
 );
 

@@ -4,7 +4,6 @@ Authentication API routes: registration, login, and profile inspection.
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status, Depends
-from bson import ObjectId
 
 from src.database import get_database
 from src.schemas.auth import UserRegister, UserLogin, Token, UserResponse

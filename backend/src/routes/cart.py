@@ -10,7 +10,6 @@ from collections import defaultdict
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from bson import ObjectId
 from pymongo import ReturnDocument
 from groq import Groq
 
