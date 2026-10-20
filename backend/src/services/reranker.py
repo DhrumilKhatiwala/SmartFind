@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Set
 from langchain_core.documents import Document
 
 # Dictionary mapping target product noun to companion accessory terms

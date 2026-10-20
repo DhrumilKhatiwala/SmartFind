@@ -9,7 +9,6 @@ langfuse>=2.0.0
 python-dotenv
 pandas
 numpy
-polars
 pyarrow
 tqdm
 lark

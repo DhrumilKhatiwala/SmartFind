@@ -9,7 +9,6 @@ Supports Langfuse v4 (OpenTelemetry-based):
 """
 
 import os
-import time
 from typing import Optional, Any
 from contextlib import contextmanager
 

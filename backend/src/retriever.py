@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List, Optional
+from typing import List
 from dotenv import load_dotenv
 
 if hasattr(sys.stdout, "reconfigure"):

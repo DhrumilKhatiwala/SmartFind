@@ -7,11 +7,7 @@ stateless guest session cart summarization.
 import os
 from datetime import datetime, timezone
 from collections import defaultdict
-from typing import List
-
 from fastapi import APIRouter, HTTPException, status, Depends
-from starlette.concurrency import run_in_threadpool
-import base64
 from pymongo import ReturnDocument
 from groq import Groq
 
@@ -26,11 +22,8 @@ from src.schemas.cart import (
     GuestCartSummaryRequest,
     CartRecommendationsRequest,
     CartRecommendationsResponse,
-    RecommendationProduct,
 )
 from src.services.auth import get_current_user
-from src.vectorstore import load_pinecone_vector_db
-from src.services.metadata import enrich_with_parquet_metadata
 from src.services.recommendations import generate_cart_recommendations_rag
 
 router = APIRouter(prefix="/cart", tags=["Shopping Cart"])

@@ -1,6 +1,6 @@
 import os
 import base64
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
 from langchain_groq import ChatGroq

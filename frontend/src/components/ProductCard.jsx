@@ -10,7 +10,6 @@ import { IconStar, IconCheckCircle } from './Icons';
  */
 const ProductCard = ({
   product,
-  index,
   hasActiveConstraints = false,
   isExplanationOpen,
   onToggleExplanation,

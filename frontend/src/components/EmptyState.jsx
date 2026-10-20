@@ -3,7 +3,7 @@ import React from 'react';
 /**
  * EmptyState renders a helpful message when zero products match the user's constraints.
  */
-const EmptyState = ({ query, onSuggestionClick }) => {
+const EmptyState = ({ onSuggestionClick }) => {
   const suggestions = [
     'headphones with rating above 4',
     'smartphones under 30000',

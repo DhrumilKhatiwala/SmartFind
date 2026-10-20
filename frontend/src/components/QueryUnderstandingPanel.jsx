@@ -19,8 +19,6 @@ const QueryUnderstandingPanel = ({
   query,
   semanticIntent,
   constraints = [],
-  count = 0,
-  latencyMs = 0,
 }) => {
   const [showPipeline, setShowPipeline] = useState(false);
 

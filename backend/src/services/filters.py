@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Any
 
 
 def map_category_synonym(cat_val: Any) -> Any:

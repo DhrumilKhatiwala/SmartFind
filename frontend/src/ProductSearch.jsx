@@ -255,8 +255,6 @@ const ProductSearch = () => {
               query={submittedQuery}
               semanticIntent={semanticIntent}
               constraints={detectedConstraints}
-              count={results.length}
-              latencyMs={latencyMs}
             />
 
             {/* Results Summary Header */}
@@ -274,7 +272,6 @@ const ProductSearch = () => {
                   <ProductCard
                     key={globalIndex}
                     product={product}
-                    index={globalIndex}
                     hasActiveConstraints={hasActiveConstraints}
                     isExplanationOpen={!!expandedExplanations[globalIndex]}
                     onToggleExplanation={() => toggleExplanation(globalIndex)}
