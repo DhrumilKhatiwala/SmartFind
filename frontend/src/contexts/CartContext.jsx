@@ -26,6 +26,12 @@ export const CartProvider = ({ children }) => {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
+  // Recommendations state (LangChain RAG)
+  const [recommendations, setRecommendations] = useState([]);
+  const [recTheme, setRecTheme] = useState(null);
+  const [recReason, setRecReason] = useState(null);
+  const [recLoading, setRecLoading] = useState(false);
+
   const authHeaders = useMemo(() => {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, [token]);
@@ -49,6 +55,9 @@ export const CartProvider = ({ children }) => {
     } else {
       setCart({ items: [], item_count: 0, total_price: 0 });
       setSummary(null);
+      setRecommendations([]);
+      setRecTheme(null);
+      setRecReason(null);
     }
   }, [isAuthenticated, token, isGuest]);
 
@@ -75,11 +84,60 @@ export const CartProvider = ({ children }) => {
     }
   }, [token, isGuest, authHeaders]);
 
+  // Fetch recommendations based on cart contents
+  const fetchRecommendations = useCallback(async (currentItems = null) => {
+    const itemsToQuery = currentItems !== null ? currentItems : cart.items;
+    if (!itemsToQuery || itemsToQuery.length === 0) {
+      setRecommendations([]);
+      setRecTheme(null);
+      setRecReason(null);
+      return;
+    }
+
+    try {
+      setRecLoading(true);
+      const payload = {
+        items: itemsToQuery.map(it => ({
+          title: it.title,
+          category: it.category || null,
+          price: it.price || null,
+        })),
+        exclude_ids: itemsToQuery.map(it => it.product_id),
+        limit: 8,
+      };
+      const res = await axios.post(`${API_BASE_URL}/cart/recommendations`, payload);
+      setRecommendations(res.data?.recommendations || []);
+      setRecTheme(res.data?.theme || null);
+      setRecReason(res.data?.reason || null);
+    } catch (err) {
+      console.error('Failed to fetch recommendations:', err);
+      setRecommendations([]);
+      setRecTheme(null);
+      setRecReason(null);
+    } finally {
+      setRecLoading(false);
+    }
+  }, [cart.items]);
+
+  // Debounced auto-fetch recommendations whenever cart.items changes
+  useEffect(() => {
+    if (!cart.items || cart.items.length === 0) {
+      setRecommendations([]);
+      setRecTheme(null);
+      setRecReason(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      fetchRecommendations(cart.items);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [cart.items, fetchRecommendations]);
+
   // Optimistic Add to Cart (0ms instant UI feedback)
   const addToCart = useCallback(async (product) => {
     if (!isAuthenticated) return false;
 
-    // 1. Immediately calculate and update UI optimistically
     const prevCart = cart;
     const existingIdx = cart.items.findIndex(it => it.product_id === product.product_id);
     let optimisticItems;
@@ -110,7 +168,6 @@ export const CartProvider = ({ children }) => {
     // If registered: sync with backend in background
     try {
       const res = await axios.post(`${API_BASE_URL}/cart/add`, product, { headers: authHeaders });
-      // Keep server response in sync
       setCart(res.data);
       return true;
     } catch (err) {
@@ -186,6 +243,9 @@ export const CartProvider = ({ children }) => {
     const prevCart = cart;
     setCart({ items: [], item_count: 0, total_price: 0 });
     setSummary(null);
+    setRecommendations([]);
+    setRecTheme(null);
+    setRecReason(null);
 
     if (isGuest) {
       sessionStorage.removeItem('sf_guest_cart');
@@ -226,6 +286,11 @@ export const CartProvider = ({ children }) => {
     loading,
     summary,
     summaryLoading,
+    recommendations,
+    recTheme,
+    recReason,
+    recLoading,
+    fetchRecommendations,
     addToCart,
     updateQuantity,
     removeItem,

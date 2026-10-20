@@ -105,7 +105,8 @@ Traditional search systems and basic vector search engines struggle with natural
 - **Session-Only Guest Cart**: Guest cart items are isolated to the active browser session (`sessionStorage`) and automatically cleared upon tab closure, with instant upgrade to a persistent MongoDB cloud cart upon registration.
 - **Cloud Shopping Cart (MongoDB Atlas)**: Persistent per-user shopping carts with real-time quantity adjustments, subtotal, and total price tracking.
 - **Groq AI Cart Summary**: Real-time natural language cart analysis powered by Groq LLM (`qwen/qwen3.8-27b`) that breaks down categories, highlights priciest items, identifies product synergies, and computes total costs.
-- **Responsive Web Interface**: Clean, mobile-friendly React frontend with suggestion chips, cart drawer/page, and pagination (48 items per page).
+- **AI Smart Pairing Recommendations**: Context-aware cart recommendation engine powered by a Groq LCEL pipeline and Pinecone vector search that suggests complementary pairings (e.g., HDMI cables for monitors, mousepads for mice) with zero-RAM Parquet metadata enrichment.
+- **Responsive Web Interface & Cart Carousel**: Clean, mobile-friendly React frontend with suggestion chips, cart drawer/page, horizontal scrollable recommendation carousel with tactile navigation controls, and pagination (48 items per page).
 - **Production API**: Lightweight FastAPI backend with interactive Swagger documentation (`/docs`) and health checks.
 - **Production LLM Observability & Tracing**: Distributed execution tracing via Langfuse v4 capturing end-to-end latencies, token consumption, and cost tracking across every query.
 
@@ -119,8 +120,8 @@ Traditional search systems and basic vector search engines struggle with natural
 | **FastAPI & Uvicorn** | High-performance asynchronous Python REST API server |
 | **MongoDB Atlas & Motor** | Cloud document database and async Python driver for persistent user auth and shopping carts |
 | **JWT & Bcrypt** | Secure password hashing (`bcrypt`) and stateless authentication tokens (`python-jose`) |
-| **LangChain** | Self-querying retrieval orchestration and AST filter translation |
-| **Groq Cloud** | High-speed LLM inference for query parsing (`openai/gpt-oss-120b`) and cart summaries (`qwen/qwen3.8-27b`) |
+| **LangChain (LCEL)** | Self-querying retrieval orchestration, AST filter translation, and RAG cart recommendation pipelines |
+| **Groq Cloud** | High-speed LLM inference for query parsing (`openai/gpt-oss-120b`), cart summaries (`qwen/qwen3.8-27b`), and recommendation intent extraction |
 | **Pinecone Cloud** | Serverless vector database for vector similarity search over 258k products |
 | **FastEmbed (ONNX)** | Lightweight CPU embedding engine (`all-MiniLM-L6-v2`, 384 dimensions) |
 | **PyArrow & Parquet** | Fast on-disk product metadata lookups with zero RAM overhead |
@@ -140,11 +141,16 @@ SmartFind provides full e-commerce shopping cart persistence and AI intelligence
       │
       ├──► POST /cart/add      ──► Updates MongoDB `carts` collection (per user)
       │
-      └──► GET /cart/summary   ──► Groq Cloud LLM generates intelligent cart overview:
-                                  • Shopping intent summary
-                                  • Key & highest-priced item callouts
-                                  • Product synergy analysis
-                                  • Exact grand total price calculation
+      ├──► GET /cart/summary   ──► Groq Cloud LLM generates intelligent cart overview:
+      │                           • Shopping intent summary
+      │                           • Key & highest-priced item callouts
+      │                           • Product synergy analysis
+      │                           • Exact grand total price calculation
+      │
+      └──► GET /cart/recommendations ──► Groq LCEL Intent Extraction
+                                         └──► Pinecone Vector Similarity Search
+                                              └──► PyArrow Parquet Zero-RAM Enrichment
+                                                   └──► Horizontal Carousel in UI
 ```
 
 ### Authentication & Cart API Endpoints
@@ -161,6 +167,7 @@ SmartFind provides full e-commerce shopping cart persistence and AI intelligence
 | `DELETE`| `/cart` | Clear all items from the cart | Yes (Bearer) |
 | `GET` | `/cart/summary` | Generate real-time Groq AI summary and category cost breakdown (Registered) | Yes (Bearer) |
 | `POST` | `/cart/guest-summary` | Generate real-time Groq AI summary and category cost breakdown (Guest Sessions) | No |
+| `GET` | `/cart/recommendations` | Retrieve AI-powered complementary product recommendations for items in the cart (Registered & Guest) | No (Optional Bearer) |
 
 ---
 
@@ -176,26 +183,26 @@ SmartFind is tested on a dataset of **258,911 real-world Amazon India products**
 
 ## 📈 Evaluation
 
-To verify whether constraint-aware retrieval actually performs better than standard vector search, we built an automated benchmark module in `evaluation/` and tested **60 realistic shopping queries** against the entire 258,911 product catalog in Pinecone.
+To verify whether constraint-aware retrieval actually performs better than standard vector search, we built an automated benchmark module in `evaluation/` and evaluated **100 realistic shopping queries** spanning 8+ major categories (Audio, Displays, Computing, Home Appliances, Kitchen, Personal Care, Fitness, and Wearables) against the entire 258,911 product catalog in Pinecone.
 
-### Benchmark Results ($K=5$)
+### Benchmark Results ($K=5$, $N=100$ Queries)
 
-| Metric | Baseline Vector Search | SmartFind (Self-Query) | Difference |
-| :--- | :---: | :---: | :---: |
-| **Constraint Satisfaction Rate** | 30.0% | **100.0%** | **+70.0% pts** |
-| **Query Success Rate** | 8.3% | **100.0%** | **+91.7% pts** |
-| **Precision @ 3** | 29.4% | **100.0%** | **+70.6% pts** |
-| **Precision @ 5** | 30.0% | **100.0%** | **+70.0% pts** |
-| **Average Latency** | **378.7 ms** | 2,033.0 ms | +1.65s (LLM parsing) |
+| Metric | Baseline Vector Search | SmartFind (Self-Query) | Absolute Gain | Relative Gain |
+| :--- | :---: | :---: | :---: | :---: |
+| **Constraint Satisfaction Rate** | 29.6% | **100.0%** | **+70.4% pts** | **+237.8%** |
+| **Query Success Rate** | 7.0% | **100.0%** | **+93.0% pts** | **+1,328.6%** |
+| **Precision @ 3** | 29.3% | **100.0%** | **+70.7% pts** | **+240.9%** |
+| **Precision @ 5** | 29.6% | **100.0%** | **+70.4% pts** | **+237.8%** |
+| **Average Latency** | **291.6 ms** | 3,557.7 ms | +3,266.1 ms (LLM AST) | — |
 
 <div align="center">
-  <img src="evaluation/benchmark_comparison.png" alt="SmartFind Evaluation Benchmark Chart" width="750px" />
+  <img src="evaluation/benchmark_comparison.png" alt="SmartFind Evaluation Benchmark Chart (100 Queries)" width="750px" />
 </div>
 
 ### What These Numbers Mean:
 
-- **Constraint Satisfaction (30.0% → 100.0%)**: In baseline vector search, 70% of returned items broke the user's price or rating rules. SmartFind ensures 100% of returned products respect every constraint.
-- **Query Success Rate (8.3% → 100.0%)**: Only 8.3% of queries in baseline search returned a completely clean page of results. SmartFind returned 100% compliant pages across all 60 test queries.
+- **Constraint Satisfaction (29.6% → 100.0%)**: In standard vector search, 70.4% of returned items broke the user's explicit price or rating rules (predominantly recommending products far above the user's budget). SmartFind guarantees 100% compliance via single-pass boolean filtering.
+- **Query Success Rate (7.0% → 100.0%)**: Only 7 out of 100 queries in baseline search returned a completely clean page of results. SmartFind achieved a 100% query success rate across all 100 diverse queries.
 
 ---
 
@@ -244,6 +251,7 @@ SmartFind/
 │   │       ├── __init__.py
 │   │       ├── auth.py             # Bcrypt hashing, JWT generation/validation, get_current_user dependency
 │   │       ├── tracing.py          # Langfuse v4 client, @observe_search decorator & span helpers
+│   │       ├── recommendations.py  # RAG cart recommendation engine (Groq LCEL + Pinecone vector search)
 │   │       ├── reranker.py         # Product-Anchor Re-ranking engine
 │   │       ├── filters.py          # AST constraint formatter & filter sanitizer
 │   │       ├── explainer.py        # Structured explainability reasoning generation
@@ -282,11 +290,11 @@ SmartFind/
 │   ├── package.json                # Frontend dependencies (React 18, Vite, React Router)
 │   └── vite.config.js              # Vite configuration
 ├── evaluation/
-│   ├── queries.json                # 60 test queries with expected constraints
+│   ├── queries.json                # 100 test queries with expected constraints across 8+ categories
 │   ├── metrics.py                  # Evaluation metrics (Constraint Satisfaction, Precision@K)
-│   ├── evaluate.py                 # Automated benchmark runner comparing hybrid vs standard search
+│   ├── evaluate.py                 # Automated benchmark runner with Groq rate-limit exponential backoff
 │   ├── generate_chart.py           # Benchmark comparison visualization generator
-│   ├── benchmark_comparison.png    # Generated evaluation metrics chart
+│   ├── benchmark_comparison.png    # Generated evaluation metrics chart (100 queries)
 │   └── results.json                # Raw benchmark data output
 ├── render.yaml                     # Render cloud deployment blueprint (Backend + Static Frontend)
 ├── .gitignore                      # Git ignore rules
@@ -374,7 +382,7 @@ Open `http://localhost:5173` in your browser.
 
 ### 4. Running the Evaluation Benchmark
 
-To run the 60-query benchmark locally:
+To run the 100-query benchmark locally:
 
 ```bash
 python evaluation/evaluate.py

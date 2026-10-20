@@ -56,3 +56,39 @@ class CartSummaryResponse(BaseModel):
 class GuestCartSummaryRequest(BaseModel):
     """Request body for generating Groq AI cart summary for guest sessions."""
     items: List[CartItem] = Field(..., min_length=1, description="List of items in the guest cart.")
+
+
+class CartRecommendationItemInput(BaseModel):
+    """An item in the cart used to query recommendations."""
+    title: str = Field(..., description="Product title.")
+    category: Optional[str] = Field(None, description="Product category.")
+    price: Optional[float] = Field(None, description="Product price.")
+
+
+class CartRecommendationsRequest(BaseModel):
+    """Request body for fetching RAG-based cart recommendations."""
+    items: List[CartRecommendationItemInput] = Field(default_factory=list, description="List of products currently in cart.")
+    exclude_ids: List[str] = Field(default_factory=list, description="Product IDs of items already in cart or excluded.")
+    limit: int = Field(8, ge=1, le=20, description="Maximum number of recommendations to return.")
+
+
+class RecommendationProduct(BaseModel):
+    """A recommended product candidate."""
+    product_id: str
+    title: str
+    price: Optional[float] = None
+    rating: Optional[float] = None
+    category: Optional[str] = None
+    sub_category: Optional[str] = None
+    image: Optional[str] = None
+    actual_price: Optional[str] = None
+    no_of_ratings: Optional[str] = None
+    page_content: str
+
+
+class CartRecommendationsResponse(BaseModel):
+    """Response containing semantic product recommendations for cart with AI shopping theme and reason."""
+    theme: Optional[str] = Field(None, description="Short AI-generated theme of the user's cart.")
+    reason: Optional[str] = Field(None, description="1-sentence explanation of why these items complement the cart.")
+    recommendations: List[RecommendationProduct] = Field(default_factory=list)
+

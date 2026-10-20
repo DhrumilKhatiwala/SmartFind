@@ -834,5 +834,597 @@
         "value": 4.0
       }
     }
+  },
+  {
+    "id": "q61",
+    "query": "projector under 15000 with rating above 4.0",
+    "semantic_intent": "projector",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 15000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q62",
+    "query": "portable bluetooth speaker under 2000",
+    "semantic_intent": "portable bluetooth speaker",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2000.0
+      }
+    }
+  },
+  {
+    "id": "q63",
+    "query": "in ear monitor earphones under 2500 with rating above 4.1",
+    "semantic_intent": "in ear monitor earphones",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q64",
+    "query": "ring light with tripod under 1500 with rating above 4.0",
+    "semantic_intent": "ring light with tripod",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q65",
+    "query": "webcam 1080p under 3000 with rating above 4.2",
+    "semantic_intent": "webcam 1080p",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 3000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q66",
+    "query": "gaming mouse under 1500 with rating above 4.2",
+    "semantic_intent": "gaming mouse",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q67",
+    "query": "ergonomic mouse pad under 500",
+    "semantic_intent": "ergonomic mouse pad",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 500.0
+      }
+    }
+  },
+  {
+    "id": "q68",
+    "query": "laptop cooling pad under 1200 with rating above 4.0",
+    "semantic_intent": "laptop cooling pad",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1200.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q69",
+    "query": "ssd 500gb under 3500 with rating above 4.3",
+    "semantic_intent": "ssd 500gb",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 3500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.3
+      }
+    }
+  },
+  {
+    "id": "q70",
+    "query": "wifi router under 2500 with rating above 4.1",
+    "semantic_intent": "wifi router",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q71",
+    "query": "wireless keyboard and mouse combo under 1800 with rating above 4.0",
+    "semantic_intent": "wireless keyboard and mouse combo",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1800.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q72",
+    "query": "tablet under 20000 with rating above 4.1",
+    "semantic_intent": "tablet",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 20000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q73",
+    "query": "toaster 2 slice under 1200 with rating above 4.0",
+    "semantic_intent": "toaster 2 slice",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1200.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q74",
+    "query": "electric rice cooker under 2500 with rating above 4.1",
+    "semantic_intent": "electric rice cooker",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q75",
+    "query": "blender for smoothies under 2000 with rating above 4.0",
+    "semantic_intent": "blender for smoothies",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q76",
+    "query": "steam iron under 1500 with rating above 4.2",
+    "semantic_intent": "steam iron",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q77",
+    "query": "hand blender under 1200 with rating above 4.1",
+    "semantic_intent": "hand blender",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1200.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q78",
+    "query": "air purifier under 9000 with rating above 4.0",
+    "semantic_intent": "air purifier",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 9000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q79",
+    "query": "ceiling fan under 2500 with rating above 4.1",
+    "semantic_intent": "ceiling fan",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q80",
+    "query": "room heater under 2000 with rating above 3.9",
+    "semantic_intent": "room heater",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 3.9
+      }
+    }
+  },
+  {
+    "id": "q81",
+    "query": "beard trimmer under 1500 with rating above 4.2",
+    "semantic_intent": "beard trimmer",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q82",
+    "query": "electric toothbrush under 1800 with rating above 4.0",
+    "semantic_intent": "electric toothbrush",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1800.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q83",
+    "query": "hair straightener under 1500 with rating above 4.1",
+    "semantic_intent": "hair straightener",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q84",
+    "query": "digital weighing scale under 1000 with rating above 4.2",
+    "semantic_intent": "digital weighing scale",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q85",
+    "query": "blood pressure monitor under 2000 with rating above 4.1",
+    "semantic_intent": "blood pressure monitor",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q86",
+    "query": "massage gun under 3000 with rating above 4.0",
+    "semantic_intent": "massage gun",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 3000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q87",
+    "query": "dumbbells set under 2000 with rating above 4.1",
+    "semantic_intent": "dumbbells set",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q88",
+    "query": "skipping rope under 400 with rating above 4.2",
+    "semantic_intent": "skipping rope",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 400.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q89",
+    "query": "football size 5 under 800 with rating above 4.0",
+    "semantic_intent": "football size 5",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 800.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q90",
+    "query": "swimming goggles under 600 with rating above 4.1",
+    "semantic_intent": "swimming goggles",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 600.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q91",
+    "query": "resistance bands under 700 with rating above 4.2",
+    "semantic_intent": "resistance bands",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 700.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q92",
+    "query": "walking shoes under 2000 with rating above 4.1",
+    "semantic_intent": "walking shoes",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q93",
+    "query": "loafers under 2500 with rating above 4.0",
+    "semantic_intent": "loafers",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 2500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q94",
+    "query": "analog watch under 1500 with rating above 4.1",
+    "semantic_intent": "analog watch",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1500.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q95",
+    "query": "laptop backpack water resistant under 1800 with rating above 4.2",
+    "semantic_intent": "laptop backpack water resistant",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1800.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
+  },
+  {
+    "id": "q96",
+    "query": "trolley bag under 4000 with rating above 4.1",
+    "semantic_intent": "trolley bag",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 4000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q97",
+    "query": "casual shirts under 800 with rating above 4.0",
+    "semantic_intent": "casual shirts",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 800.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q98",
+    "query": "jeans under 1200 with rating above 4.0",
+    "semantic_intent": "jeans",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1200.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.0
+      }
+    }
+  },
+  {
+    "id": "q99",
+    "query": "cotton bedsheet under 1000 with rating above 4.1",
+    "semantic_intent": "cotton bedsheet",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 1000.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.1
+      }
+    }
+  },
+  {
+    "id": "q100",
+    "query": "stainless steel knife set under 800 with rating above 4.2",
+    "semantic_intent": "stainless steel knife set",
+    "constraints": {
+      "price": {
+        "op": "<=",
+        "value": 800.0
+      },
+      "rating": {
+        "op": ">=",
+        "value": 4.2
+      }
+    }
   }
 ]

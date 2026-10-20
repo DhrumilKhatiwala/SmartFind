@@ -103,8 +103,18 @@ def run_retrieval_evaluation(
         # ----------------------------------------------------
         t0 = time.time()
         try:
-            # 1. LLM Query Decomposition (Query -> StructuredQuery AST)
-            structured_query = retriever.query_constructor.invoke({"query": raw_query})
+            # 1. LLM Query Decomposition (Query -> StructuredQuery AST) with rate-limit retry
+            structured_query = None
+            for attempt in range(4):
+                try:
+                    structured_query = retriever.query_constructor.invoke({"query": raw_query})
+                    break
+                except Exception as invoke_err:
+                    err_s = str(invoke_err).lower()
+                    if ("429" in err_s or "rate" in err_s or "quota" in err_s) and attempt < 3:
+                        time.sleep(2.0 * (attempt + 1))
+                        continue
+                    raise invoke_err
 
             # 2. AST Translation to Pinecone Boolean Filter
             semantic_query, search_kwargs = (

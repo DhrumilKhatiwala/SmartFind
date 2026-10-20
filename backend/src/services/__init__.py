@@ -2,6 +2,7 @@ from .filters import sanitize_pinecone_filter, format_ast_constraints, map_categ
 from .reranker import rerank_products
 from .explainer import generate_structured_explanation
 from .metadata import init_metadata_dataset, enrich_with_parquet_metadata, product_lookup
+from .recommendations import generate_cart_recommendations_rag
 from .tracing import (
     create_trace,
     create_langchain_handler,
@@ -21,6 +22,7 @@ __all__ = [
     "init_metadata_dataset",
     "enrich_with_parquet_metadata",
     "product_lookup",
+    "generate_cart_recommendations_rag",
     "create_trace",
     "create_langchain_handler",
     "trace_span",

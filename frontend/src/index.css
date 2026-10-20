@@ -466,3 +466,81 @@ input:focus, button:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+/* Cart Recommendations Section Styles */
+.cart-recommendations {
+  transition: all 0.25s ease;
+}
+
+/* Cart Recommendations: Single-Row Scrollable Carousel */
+.cart-recommendations {
+  transition: all 0.25s ease;
+}
+
+.cart-rec-scroll-track {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 14px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  scroll-behavior: smooth !important;
+  padding-bottom: 8px !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.cart-rec-scroll-track::-webkit-scrollbar {
+  height: 5px;
+}
+
+.cart-rec-scroll-track::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.cart-rec-scroll-track::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.cart-rec-scroll-track::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.cart-rec-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.cart-rec-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.cart-rec-scroll-controls button:hover {
+  background-color: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+  transform: scale(1.05);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 640px) {
+  .cart-rec-scroll-controls {
+    display: none !important;
+  }
+  .cart-recommendations {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+  }
+  .cart-rec-scroll-track {
+    gap: 10px !important;
+  }
+}

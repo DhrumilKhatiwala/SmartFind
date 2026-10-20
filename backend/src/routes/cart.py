@@ -10,6 +10,8 @@ from collections import defaultdict
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status, Depends
+from starlette.concurrency import run_in_threadpool
+import base64
 from pymongo import ReturnDocument
 from groq import Groq
 
@@ -22,8 +24,14 @@ from src.schemas.cart import (
     CategoryBreakdown,
     CartSummaryResponse,
     GuestCartSummaryRequest,
+    CartRecommendationsRequest,
+    CartRecommendationsResponse,
+    RecommendationProduct,
 )
 from src.services.auth import get_current_user
+from src.vectorstore import load_pinecone_vector_db
+from src.services.metadata import enrich_with_parquet_metadata
+from src.services.recommendations import generate_cart_recommendations_rag
 
 router = APIRouter(prefix="/cart", tags=["Shopping Cart"])
 
@@ -319,3 +327,22 @@ async def get_guest_cart_summary(payload: GuestCartSummaryRequest):
 
     items_data = [item.model_dump() for item in payload.items]
     return _generate_groq_summary(items_data)
+
+@router.post(
+    "/recommendations",
+    response_model=CartRecommendationsResponse,
+    summary="Get RAG-powered product recommendations based on cart items using LangChain",
+)
+async def get_cart_recommendations(payload: CartRecommendationsRequest):
+    """
+    RAG-based product recommendation system powered by LangChain:
+    1. Cart Intent Analysis via LangChain ChatGroq LCEL chain.
+    2. Vector similarity retrieval via LangChain PineconeVectorStore.
+    3. Excludes items already in cart and deduplicates.
+    4. Memory-mapped Parquet metadata enrichment.
+    """
+    return await generate_cart_recommendations_rag(
+        items=payload.items,
+        exclude_ids=payload.exclude_ids,
+        limit=payload.limit,
+    )

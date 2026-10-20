@@ -34,7 +34,11 @@ def enrich_with_parquet_metadata(docs: List[Any]) -> None:
     """
     global metadata_dataset, product_lookup
 
-    if not docs or metadata_dataset is None:
+    if not docs:
+        return
+    if metadata_dataset is None:
+        init_metadata_dataset()
+    if metadata_dataset is None:
         return
 
     # Find which product titles need disk lookup
