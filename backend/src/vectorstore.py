@@ -19,10 +19,16 @@ class FastEmbedWrapper(Embeddings):
         self.model = TextEmbedding(model_name=model_name)
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        return [list(v) for v in self.model.embed(texts)]
+        # Convert numpy arrays to standard Python floats for Pinecone serialization compatibility
+        return [
+            v.tolist() if hasattr(v, 'tolist') else [float(x) for x in v]
+            for v in self.model.embed(texts)
+        ]
 
     def embed_query(self, text: str) -> List[float]:
-        return list(list(self.model.embed([text]))[0])
+        # FastEmbed outputs numpy.float32/64 which breaks Pinecone serializer if not cast to native float
+        vec = next(self.model.embed([text]))
+        return vec.tolist() if hasattr(vec, 'tolist') else [float(x) for x in vec]
 
 
 def download_and_get_local_embeddings(
